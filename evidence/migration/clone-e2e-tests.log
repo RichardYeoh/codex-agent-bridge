@@ -1,0 +1,20 @@
+
+> codex-agent-bridge@0.2.2 test:e2e
+> node tools/run-e2e.cjs
+
+✔ valid ports and surrounding spaces (0.5556ms)
+✔ reject "oops" (0.1596ms)
+✔ reject "" (0.0539ms)
+✔ reject "1e2" (0.0467ms)
+✔ reject "1.5" (0.0662ms)
+✔ reject "0" (0.0457ms)
+✔ reject "65536" (0.0462ms)
+✔ the restored task uses the required cbc marker exactly (3.7572ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 78.0377

@@ -1,0 +1,54 @@
+
+> codex-agent-bridge@0.2.2 test
+> npm --workspace agent-bridge test
+
+
+> @codex-agent-bridge/coordinator@0.2.2 test
+> node --test test/*.test.js
+
+✔ registry exposes the cbc worker (1.3001ms)
+✔ display names are independent of task IDs and remain unique among live agents (0.3476ms)
+✔ unknown agent names are rejected with the list of registered agents (0.5408ms)
+✔ cbc command skips permissions by default and quotes paths (0.6147ms)
+✔ cbc command honours permission mode and resume id (0.3526ms)
+✔ installer owns only the delegation skill, never the official Herdr skill (1.431ms)
+✔ skill installation binds the checkout path and uninstall recognizes the rendered copy (8.5653ms)
+✔ uninstall preserves a skill with modified references or extra user files (17.4805ms)
+✔ fast completion is observed and a task is submitted exactly once (941.6355ms)
+✔ uncertain submission is durable, never resent, and recover stays observational (1280.0837ms)
+✔ session recovery filters identical pane IDs by task, server and launch time (6.9905ms)
+✔ worker replacement cannot silently receive a follow-up (0.3194ms)
+✔ queue success is distinct from receipt, duplicate recovery does not send twice (33.9838ms)
+✔ queue failure can be repaired while an interrupted send is not blindly repeated (32.9588ms)
+✔ task mutations serialize and abandoned locks can be recovered (469.5247ms)
+✔ a replacement failure preserves the last valid state instead of truncating it (2.4351ms)
+✔ normal delegation reuses the caller pane workspace (1.2821ms)
+✔ daemon clients can explicitly select an existing workspace tab (0.4625ms)
+✔ cross-server IDs are not inherited and new workspaces require an explicit request (0.1588ms)
+✔ split geometry avoids creating narrow columns (0.1856ms)
+✔ multiple rounds coalesce to one wake and acknowledging removes the queued wake (80.5987ms)
+✔ pause withdraws only bridge messages and resume does not replay accepted work (35.5696ms)
+✔ ack one task keeps another task pending; acceptance and rework prune obsolete wakes (70.1827ms)
+✔ local pending state survives notification transport failure without a resend loop (19.0135ms)
+✔ quota, rate limit and network blockers are classified without treating normal credits as errors (0.8671ms)
+✔ a lost add reply remains uncertain and is not automatically submitted again (18.0544ms)
+✔ writeJsonAtomic creates a file and leaves no temp/backup behind (5.8704ms)
+✔ writeJsonAtomic replaces existing content and survives stale backup files (11.3685ms)
+✔ writeJsonAtomic creates parent directories (4.7185ms)
+✔ task ids are validated, ids and dirs stay inside the state dir (2.3375ms)
+✔ saveTask/loadTask round-trips and updates updatedAt (21.6058ms)
+✔ appendJsonl appends one line per call and stays parseable (4.2268ms)
+✔ readJson returns fallback only for missing files (2.647ms)
+✔ event() writes taskId, round and type (2.6412ms)
+✔ watcher preserves session and never resubmits after wait_timeout (348.545ms)
+✔ watcher preserves session and never resubmits after quota (460.5244ms)
+✔ watcher preserves session and never resubmits after network (442.9561ms)
+✔ watcher preserves session and never resubmits after rate_limit (431.2563ms)
+ℹ tests 38
+ℹ suites 0
+ℹ pass 38
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2923.1495

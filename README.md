@@ -4,6 +4,8 @@
 
 当前版本：0.2.2。运行环境：原生Windows、Node.js 20及以上、PowerShell、Herdr、Codex CLI与CBC CLI。已验证环境与技术限制见[审核报告](Codex审核报告.md)。公开源码不包含认证配置或本机原始会话。
 
+GitHub仓库：[RichardYeoh/codex-agent-bridge](https://github.com/RichardYeoh/codex-agent-bridge)。验证工作流使用Windows运行器，执行自动回归和交付验收。
+
 ## 安装
 
 在工程根目录执行：
