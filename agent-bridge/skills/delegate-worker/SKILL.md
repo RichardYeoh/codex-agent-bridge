@@ -13,7 +13,8 @@ Codex保留规划、核心决策和最终验收；CBC、ZCode独立执行明确�
 ## 环境与职责
 
 - 官方 `herdr` skill 负责通用终端、Pane 和 Agent 控制。本技能负责委派状态、轮次、交付与验收，不修改或复制官方 skill。
-- 一个项目复用一个 Workspace。有调用 Pane 时默认创建同级 Pane；只有已核实的 Workspace 时，在其中创建 Tab。工具未继承上下文时传 `--workspace <ID>` 或 `--pane <ID>`，不使用 UI 焦点推断。独立项目、Worktree或明确隔离时才传 `--new-workspace --isolation-reason <原因>`。
+- 一个项目复用一个Workspace。第一标签固定为Codex主Pane占左半屏、执行者占右半屏；第2个执行者只拆右半为上下两格，绝不再拆主Pane。第3个执行者进入新标签；该页依次为整页、左右、右侧上下、四格，满4个再开下一标签。复用现存会话不增加Pane。不搬动或拆分无归属的用户Pane。
+- 布局锚点是已核实的Codex主Pane，优先传--pane <主PaneID>；只有Workspace时要求其中有唯一可识别Codex，否则先明确主Pane，不能按UI焦点猜测。独立项目、Worktree或明确隔离时才传--new-workspace --isolation-reason。
 - Herdr执行者显示名使用`cbc`、`zcode`等Agent自身名称，有同类存活实例时加简短编号。任务ID与显示名分离；所有任务与会话关联仍以持久状态为准。
 - 在 Herdr Pane 中按官方技能读取继承的上下文。若命令经 Codex 常驻 app-server 执行，工具子进程可能没有 `HERDR_*`。此时不得伪造环境标识或依赖焦点；只有用户已指定/授权对应 Herdr 环境时，显式指定已核实的 `--session`，通过协调器执行该任务。
 - 通知目标优先使用 `CODEX_THREAD_ID`；实际派工时明确传入 `--codex-thread`。没有可靠目标时先解决绑定，避免产生无人接收的任务。
@@ -29,7 +30,14 @@ Codex保留规划、核心决策和最终验收；CBC、ZCode独立执行明确�
 4. 逐项给出客观验收命令与预期结果，并写明交付文件、真实证据和停止条件。禁止执行者通过降低期望、隐去失败或自称完成替代验收。
 5. 写入task-spec-v1 JSON：goal、background、inputs（path/purpose）、allowedChanges、requirements、acceptance（command/expected）、deliverables必填；steps、preserve、edgeCases、examples、nonGoals、stopConditions按需填写。projectContext只保存可跨任务复用的稳定项目背景。协调器校验必填项，不替Codex猜测需求。
 
-派工前查询 `node $bridge sessions --cwd <项目目录> --agent <执行端>`。同类Agent名称不等于同一会话；以持久化且重新核实的workerSessionId、项目和实际占用者为准。首次发送完整规格；已核实同一会话时保留背景引用，只发送当前目标、变化、参考输入、边界、验收和交付。返工还应明确失败证据、修复点及应保留内容，不重复解释整个项目。
+派工前查询`node $bridge sessions --cwd <项目根目录> --agent <执行端>`，参考已保存的目标、文件范围和真实sessionId判断上下文连续性。默认续用相关会话，不要求用户反复说“复用之前会话”。判断由Codex完成，不在工具中建立固定角色或任务类型分类：
+
+- 同一目标、模块或交付的连续实现、调试、补测试，通常沿用同一会话，即使工作阶段或角色称呼改变。
+- 角色和任务类型只是线索；无关工作目标、不同且相互冲突的背景、需要独立视角的验证，或用户明确要求多会话时，才另建上下文。不可机械地每次派工、每个阶段都新建。
+- 用--worker-key <稳定上下文键>选择已有绑定；默认primary。绑定键只是不透明标识，不是角色枚举，不按任务ID每轮更换。项目cwd保持项目根目录，具体模块通过输入与范围描述。
+- 已关闭Pane时根据保存的sessionId重新拉起原生会话，核实身份后继续；不能因为Pane关闭就新开空白会话。连接不确定、占用者变化或原会话仍忙时先恢复/核对，不另开一个规避问题。
+
+同类Agent名称不等于同一会话。首次发送完整规格；核实同一会话后保留背景引用，发送当前目标、变化、参考输入、边界、验收和交付。返工给出失败证据、修复点及应保留内容，不重复解释整个项目。
 
 协调器选择full/delta并保存上下文引用。会话身份变化、压缩、背景或规则版本变化、上下文不确定时退回full。需明确重开时使用--new-session。不得以节省提示词为由省略新要求、差异或验收。
 
@@ -40,7 +48,7 @@ Codex保留规划、核心决策和最终验收；CBC、ZCode独立执行明确�
 ```powershell
 $bridge = '{{AGENT_BRIDGE_ROOT}}/bin/agent-bridge.js'
 node $bridge dispatch --session <已核实的会话名> --workspace <项目WorkspaceID> --codex-thread $env:CODEX_THREAD_ID `
-  --cwd <任务目录> --task-id <任务ID> --spec-file <规格JSON路径>
+  --cwd <项目根目录> --task-id <任务ID> --worker-key <已有或新建的稳定上下文键> --spec-file <规格JSON路径>
 ```
 
 首次目录信任仅在该目录已获用户信任/授权时添加 `--trust-folder`。可用 `--model <CBC模型ID> --effort <强度>` 选择执行模型，不修改全局默认。保留 CBC 权限检查时添加 `--no-skip-permissions --permission-mode acceptEdits`。
@@ -48,6 +56,8 @@ node $bridge dispatch --session <已核实的会话名> --workspace <项目Works
 ZCode使用同一命令加--agent zcode。默认GLM-5.3-Flash、low，复用Desktop登录和Start Plan，连接配置位于状态根zcode-desktop.json，或由--zcode-config指定。先读取[ZCode接入与限制](references/zcode-desktop.md)。不通过浏览器派工，不改安装包，不自动切换模型。默认跳过权限时映射yolo；需保留检查时加--no-skip-permissions --permission-mode edit，出现权限请求后先核实具体命令及已有授权，只能显式单次批准。
 
 派工只等待启动和确认任务已开始，不等待任务完成。返回后继续独立工作，或向用户说明后台任务进度并结束当前轮；依靠完成通知继续。不要反复读取未变化的状态和日志。
+
+默认单任务串行。只有用户明确要求并行时才为每个任务传--parallel及独立--worker-key；先划分互不重叠的明确写入文件/目录，公共集成文件由主控处理。工具允许这些明确的并行任务，仍禁止同一上下文同时接收两个未闭合任务。用户举例说明并行不等于要求立即拉起多个Agent。同一ZCode Desktop远控绑定只有一个terminal席位，不能并发占用；CBC可按明确授权并行。
 
 ## 通知与验收
 

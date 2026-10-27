@@ -1,0 +1,16 @@
+{
+  "version": "0.3.1",
+  "regression": {
+    "pass": 72,
+    "fail": 0
+  },
+  "legacyAcceptance": {
+    "pass": 8,
+    "fail": 0
+  },
+  "layout": {
+    "realShellCheckpoints": 10,
+    "modelCalls": 0
+  },
+  "skillValidated": true
+}

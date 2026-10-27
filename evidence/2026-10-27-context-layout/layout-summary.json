@@ -1,0 +1,128 @@
+{
+  "passed": true,
+  "checkpoints": [
+    {
+      "workers": 1,
+      "tabs": 1,
+      "panesPerTab": [
+        2
+      ],
+      "mainWidth": 82,
+      "areaWidth": 164,
+      "mainHeight": 45,
+      "areaHeight": 45
+    },
+    {
+      "workers": 2,
+      "tabs": 1,
+      "panesPerTab": [
+        3
+      ],
+      "mainWidth": 82,
+      "areaWidth": 164,
+      "mainHeight": 45,
+      "areaHeight": 45
+    },
+    {
+      "workers": 3,
+      "tabs": 2,
+      "panesPerTab": [
+        3,
+        1
+      ],
+      "mainWidth": 82,
+      "areaWidth": 164,
+      "mainHeight": 45,
+      "areaHeight": 45
+    },
+    {
+      "workers": 4,
+      "tabs": 2,
+      "panesPerTab": [
+        3,
+        2
+      ],
+      "mainWidth": 82,
+      "areaWidth": 164,
+      "mainHeight": 45,
+      "areaHeight": 45
+    },
+    {
+      "workers": 5,
+      "tabs": 2,
+      "panesPerTab": [
+        3,
+        3
+      ],
+      "mainWidth": 82,
+      "areaWidth": 164,
+      "mainHeight": 45,
+      "areaHeight": 45
+    },
+    {
+      "workers": 6,
+      "tabs": 2,
+      "panesPerTab": [
+        3,
+        4
+      ],
+      "mainWidth": 82,
+      "areaWidth": 164,
+      "mainHeight": 45,
+      "areaHeight": 45
+    },
+    {
+      "workers": 7,
+      "tabs": 3,
+      "panesPerTab": [
+        3,
+        4,
+        1
+      ],
+      "mainWidth": 82,
+      "areaWidth": 164,
+      "mainHeight": 45,
+      "areaHeight": 45
+    },
+    {
+      "workers": 8,
+      "tabs": 3,
+      "panesPerTab": [
+        3,
+        4,
+        2
+      ],
+      "mainWidth": 82,
+      "areaWidth": 164,
+      "mainHeight": 45,
+      "areaHeight": 45
+    },
+    {
+      "workers": 9,
+      "tabs": 3,
+      "panesPerTab": [
+        3,
+        4,
+        3
+      ],
+      "mainWidth": 82,
+      "areaWidth": 164,
+      "mainHeight": 45,
+      "areaHeight": 45
+    },
+    {
+      "workers": 10,
+      "tabs": 3,
+      "panesPerTab": [
+        3,
+        4,
+        4
+      ],
+      "mainWidth": 82,
+      "areaWidth": 164,
+      "mainHeight": 45,
+      "areaHeight": 45
+    }
+  ],
+  "modelCalls": 0
+}

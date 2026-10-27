@@ -1,4 +1,4 @@
-# 协调器操作说明 0.3.0
+# 协调器操作说明 0.3.1
 
 项目定位、安装、维护与发布见[根目录README](../README.md)。在项目根目录运行npm ci；全部依赖由根package-lock.json锁定。
 
@@ -16,9 +16,11 @@ node $bridge rework <任务ID> --prompt-file <返工要求>
 node $bridge accept <任务ID>
 ```
 
-也可用--pane指定调用Pane，创建同级Pane。明确隔离才用--new-workspace --isolation-reason。执行显示名cbc或zcode，任务ID独立；已有同类执行者时显示名加短编号。默认CBC，加--agent zcode选择Desktop执行端。
+优先--pane指定Codex主Pane，协调器固定保留其左半屏和完整高度，先填右侧上下两个执行Pane，后续按每标签4格扩展。只有Workspace时要求有唯一Codex锚点。明确隔离才用--new-workspace --isolation-reason。执行显示名cbc或zcode，任务ID独立；已有同类执行者时显示名加短编号。默认CBC，加--agent zcode选择Desktop执行端。
 
-规格写法见[模板](skills/delegate-worker/references/task-brief-template.md)。goal、background、inputs、allowedChanges、requirements、acceptance和deliverables必填，按需补steps、preserve、examples、edgeCases、nonGoals、stopConditions。projectContext保存可复用的稳定项目背景。默认尝试复用同项目的已验收、存活且会话身份一致的worker，--new-session明确重开。首轮完整，后续核实上下文后发送差量；缺少交付、身份不符或上下文变化时不使用未经确认的回执。正式需求变更时rework同时传--spec-file。
+规格写法见[模板](skills/delegate-worker/references/task-brief-template.md)。goal、background、inputs、allowedChanges、requirements、acceptance和deliverables必填，按需补steps、preserve、examples、edgeCases、nonGoals、stopConditions。projectContext保存稳定项目背景。Codex根据上下文连续性选择--worker-key，默认primary；该键不定义固定角色。相关会话默认复用，已关闭Pane也按保存sessionId恢复，核实后使用差量。--new-session明确重开，--full-context明确发送完整背景。正式需求变更时rework同时传--spec-file。
+
+默认串行。只有用户明确要求并行时，各任务均传--parallel及独立--worker-key，且allowedChanges必须为互不重叠的明确文件/目录，不接受含糊glob。同一绑定的未闭合任务不能被新任务挤占。ZCode同一Desktop Relay绑定仍需串行。具体选择规则和布局顺序见[说明](../docs/上下文复用与面板布局.md)。
 
 目录信任已获授权时可添加--trust-folder。CBC默认-y；需要保留权限检查时传--no-skip-permissions --permission-mode acceptEdits。可传--model和--effort，不修改全局默认。cwd与--add-dir不是操作系统沙箱。
 

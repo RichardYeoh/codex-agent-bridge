@@ -1,4 +1,4 @@
-> 下文保留0.2.1独立审核结论，公开副本已脱敏。当前版本0.3.0另完成结构化任务规则、真实会话差量与ZCode Desktop执行端，证据见[evidence/2026-10-27-integration](evidence/2026-10-27-integration/README.md)，路线选择见[ZCode接入说明](docs/ZCode接入与方案选择.md)。历史“尚未接入”仅对应当时阶段；新版空闲唤醒等未验证项仍保留。
+> 下文保留0.2.1独立审核结论，公开副本已脱敏。0.3.0完成结构化任务规则、真实会话差量与ZCode Desktop执行端；当前0.3.1增加跨任务原session恢复与主控半屏布局，证据见[evidence/2026-10-27-context-layout](evidence/2026-10-27-context-layout/README.md)。路线选择见[ZCode接入说明](docs/ZCode接入与方案选择.md)。历史“尚未接入”仅对应当时阶段；新版空闲唤醒等未验证项仍保留。
 
 # Codex + Herdr + CBC 独立审核报告
 

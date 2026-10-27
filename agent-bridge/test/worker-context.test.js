@@ -6,7 +6,7 @@ const path = require('node:path');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { saveTask, loadTask } = require('../lib/util');
-const { recordContext, preparePromptContext, tryReuseContext, listContexts, observedContext } = require('../lib/worker-context');
+const { recordContext, preparePromptContext, tryReuseContext, listContexts, observedContext, contextPath, projectKey, loadContext } = require('../lib/worker-context');
 const { writeWorkerPolicy, normalizeTaskSpec, renderTaskSpec } = require('../lib/worker-policy');
 const { writeLease, leaseForEvent } = require('../lib/worker-lease');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bridge-context-'));
@@ -66,9 +66,51 @@ test('accepted worker is reused only after live session attestation and scope ma
   const other = value('context-other'); other.placement = { mode: 'tab', workspaceId: 'w2' };
   assert.equal(tryReuseContext(other, options), false);
   const replaced = { ...options, attest: () => ({ sessionId: 'replacement' }) };
-  assert.equal(tryReuseContext(value('context-replaced'), replaced), false);
+  assert.throws(() => tryReuseContext(value('context-replaced'), replaced), /session changed/);
   assert.equal(listContexts(root, 'cbc').length, 1);
   assert.equal(listContexts(path.join(root, 'other-project'), 'cbc').length, 0);
+  const inherited = value('context-profile'); inherited.permissionExplicit = false;
+  inherited.skipPermissions = false; inherited.permissionMode = 'different-default';
+  assert.equal(tryReuseContext(inherited, options), true);
+  assert.equal(inherited.skipPermissions, previous.skipPermissions);
+  assert.equal(inherited.permissionMode, previous.permissionMode);
+});
+
+test('opaque work-context bindings preserve independent sessions without a role taxonomy', () => {
+  const first = value('context-stream-one'); first.workerKey = '模块A连续调试'; first.workerSessionId = 'stream-one'; first.status = 'accepted';
+  writeWorkerPolicy(first); recordContext(first);
+  const second = value('context-stream-two'); second.workerKey = 'independent-check'; second.workerSessionId = 'stream-two'; second.status = 'accepted';
+  writeWorkerPolicy(second); recordContext(second);
+  assert.notEqual(contextPath(first), contextPath(second));
+  assert.equal(loadContext(first).workerSessionId, 'stream-one');
+  assert.equal(loadContext(second).workerSessionId, 'stream-two');
+  assert.equal(listContexts(root, 'cbc', '模块A连续调试').length, 1);
+  second.workerKey = 'unseen'; assert.equal(loadContext(second), null);
+});
+
+test('closed panes plan native session restoration while transport failures never fork sessions', () => {
+  const prior = value('context-cold-prior'); prior.workerKey = 'cold-check'; prior.status = 'accepted';
+  writeWorkerPolicy(prior); saveTask(prior); recordContext(prior);
+  const candidate = value('context-cold-next'); candidate.workerKey = prior.workerKey;
+  candidate.placement = { mode: 'pane', anchorPaneId: 'w1:main', workspaceId: 'w1' };
+  const missing = Object.assign(new Error('closed'), { herdrCode: 'pane_not_found' });
+  assert.equal(tryReuseContext(candidate, { inspect: () => { throw missing; }, call: () => ({ result: { agents: [] } }) }), false);
+  assert.equal(candidate.resumeContextSessionId, prior.workerSessionId);
+  assert.equal(candidate.mainPaneId, 'w1:main');
+  candidate.terminalId = 'new-terminal'; candidate.restoredContextSessionId = prior.workerSessionId;
+  writeWorkerPolicy(candidate); preparePromptContext(candidate, 'Continue after reopening');
+  assert.equal(candidate.promptContext.mode, 'delta');
+  assert.throws(() => tryReuseContext(candidate, { inspect: () => { throw new Error('connection failed'); } }), /connection failed/);
+  assert.throws(() => tryReuseContext(candidate, { inspect: () => { throw missing; },
+    call: () => ({ result: { agents: [{ terminal_id: prior.terminalId }] } }) }), /still present/);
+});
+
+test('legacy project receipts are reusable only through the default binding', () => {
+  const task = value('context-legacy'); task.cwd = path.join(root, 'legacy-project');
+  const legacy = path.join(root, 'worker-contexts', projectKey(task.cwd, task.agent, task.herdrSession) + '.json');
+  fs.writeFileSync(legacy, JSON.stringify({ ...task, lastTaskId: task.id }));
+  assert.equal(loadContext(task).workerSessionId, task.workerSessionId);
+  task.workerKey = 'other-context'; assert.equal(loadContext(task), null);
 });
 test('lease changes the active task without reusing the previous task identity', () => {
   const task = value('lease-first'); writeLease(task);

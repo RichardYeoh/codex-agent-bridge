@@ -1,0 +1,17 @@
+{
+  "version": "0.3.1",
+  "cbc": {
+    "sameSession": true,
+    "promptMode": "delta",
+    "restored": true,
+    "independentAcceptancePassed": true,
+    "accepted": true
+  },
+  "zcode": {
+    "sameSession": true,
+    "restored": true,
+    "promptMode": "delta",
+    "independentAcceptancePassed": true,
+    "accepted": true
+  }
+}

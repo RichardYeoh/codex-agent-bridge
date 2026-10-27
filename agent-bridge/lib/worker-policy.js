@@ -355,6 +355,7 @@ function roundInfo(task, mode) {
   return [
     '- 任务ID：' + (typeof task.id === 'string' && task.id.trim() ? task.id : '未提供'),
     '- 执行端：' + (typeof task.agent === 'string' && task.agent.trim() ? task.agent : '未提供'),
+    '- 工作上下文绑定：' + (task.workerKey || 'primary'),
     '- 轮次：' + round,
     '- 规格模式：' + mode,
     '- 工作目录：' + cwd,

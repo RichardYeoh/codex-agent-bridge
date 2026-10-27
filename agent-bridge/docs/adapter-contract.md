@@ -31,4 +31,6 @@
 
 worker-policy统一规格校验与提示渲染；worker-context维护真实会话的已交付回执；worker-lease解决同一执行进程先后承担不同任务时环境变量仍保留旧taskId的问题。注册名称不是集成完成的证据，新执行端仍须实测所有必要行为。具体ZCode路线与限制见[接入说明](../../docs/ZCode接入与方案选择.md)。
 
+0.3.1使用不透明worker-key保存多个工作上下文，分类与选择由Codex/Skill负责；worker-binding仅核对绑定，worker-scheduling保持默认串行并校验明确并行的写入范围。已关闭Pane的跨任务恢复将保存的原生sessionId传入buildCommand；启动后须有真实session回执才能继续使用差量。location固定保留Codex左半屏，后续按每页4个执行Pane分配，不按任务调用次数增加位置。
+
 Source server 的远程连接与手机远控是不同入口，不能因为存在同名 V4 命令，就把远端 server 的 `/ws` 接口当成现有桌面的本地监听服务。

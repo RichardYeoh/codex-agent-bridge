@@ -14,8 +14,10 @@ const { getAgent, listAgents, chooseAgentName } = require('../lib/agents');
 const { assertWorker, updateWorkerSession } = require('../lib/worker');
 const { placementFor, createLocation } = require('../lib/location');
 const { writeWorkerPolicy, normalizeTaskSpec, renderRoundInstructions, renderSubmissionPointer } = require('../lib/worker-policy');
-const { recordContext, preparePromptContext, tryReuseContext, listContexts } = require('../lib/worker-context');
+const { recordContext, preparePromptContext, tryReuseContext, listContexts, observedContext } = require('../lib/worker-context');
 const { writeLease } = require('../lib/worker-lease');
+const { bindingKey } = require('../lib/worker-binding');
+const { assertSingleActive } = require('../lib/worker-scheduling');
 
 function missingWorker(error) {
   return ['agent_not_found', 'pane_not_found', 'agent_not_registered'].includes(error.herdrCode);
@@ -30,7 +32,7 @@ function parse(argv) {
       continue;
     }
     const key = arg.slice(2);
-    if (['json', 'force', 'trust-folder', 'no-skip-permissions', 'resend-notification', 'new-workspace', 'new-session', 'full-context'].includes(key)) options[key] = true;
+    if (['json', 'force', 'trust-folder', 'no-skip-permissions', 'resend-notification', 'new-workspace', 'new-session', 'full-context', 'parallel'].includes(key)) options[key] = true;
     else options[key] = argv[++i];
   }
   return options;
@@ -105,6 +107,7 @@ async function launchWorker(task, resumeId, { trustFolder = false } = {}) {
   task.tabId = created.tabId;
   task.paneId = created.pane.pane_id;
   task.terminalId = created.pane.terminal_id;
+  task.mainPaneId = created.mainPaneId || task.mainPaneId;
   task.createdLocation = { mode: created.mode, ownsWorkspace: created.ownsWorkspace };
   delete task.recoveryPlacement;
   delete task.agentNameReleased;
@@ -145,6 +148,10 @@ async function launchWorker(task, resumeId, { trustFolder = false } = {}) {
         api(task.herdrSession, ['pane', 'rename', task.paneId, getAgent(task.agent).displayName || task.agent]);
         task.terminalId = agent.terminal_id;
         updateWorkerSession(task);
+        if (resumeId) {
+          if (observedContext(task)?.sessionId !== resumeId) throw new Error('Restored worker session has not been attested');
+          task.restoredContextSessionId = resumeId;
+        }
         writeLease(task);
         task.status = 'ready';
         saveTask(task);
@@ -162,7 +169,7 @@ function deliveryInstructions(task) {
 
 async function submit(task, promptBody, { activityTimeoutMs = 20000, startWatcherFn = startWatcher } = {}) {
   if (!promptBody) throw new Error('No pending task brief is available');
-  assertSingleActive(task.id);
+  assertSingleActive(task);
   const before = assertWorker(task, agentInfo(task.herdrSession, task.paneId));
   if (!['idle', 'done'].includes(before.agent_status)) {
     throw new Error(`Worker is not ready for a new round: ${before.agent_status}`);
@@ -231,6 +238,7 @@ async function dispatch(options) {
   const cwd = path.resolve(required(options.cwd, 'cwd'));
   if (!fs.existsSync(cwd) || !fs.statSync(cwd).isDirectory()) throw new Error(`Invalid cwd: ${cwd}`);
   const worker = getAgent(options.agent || 'cbc');
+  if (options.parallel && !options['worker-key']) throw new Error('Explicit parallel tasks require distinct --worker-key bindings');
   let zcodeConfig, zcodeBindingSha256;
   if (worker.id === 'zcode') {
     if (Number(process.versions.node.split('.')[0]) < 24) throw new Error('ZCode Desktop adapter requires Node.js 24 or later');
@@ -244,6 +252,8 @@ async function dispatch(options) {
     schemaVersion: 1,
     id: options['task-id'] || makeTaskId(),
     agent: worker.id,
+    workerKey: bindingKey(options['worker-key']),
+    parallel: Boolean(options.parallel),
     ...(zcodeConfig ? { zcodeConfig, zcodeBindingSha256 } : {}),
     placement: placementFor(options),
     cwd,
@@ -251,8 +261,9 @@ async function dispatch(options) {
     stateDir: config().stateDir,
     permissionMode: options['permission-mode'] || config().defaultPermissionMode,
     skipPermissions: !options['no-skip-permissions'],
-    model: options.model || (worker.id === 'zcode' ? 'GLM-5.3-Flash' : null),
-    effort: options.effort || (worker.id === 'zcode' ? 'low' : null),
+    permissionExplicit: Boolean(options['permission-mode'] || options['no-skip-permissions']),
+    model: options.model || null,
+    effort: options.effort || null,
     waitTimeoutMs,
     taskSpec,
     forceFullContext: Boolean(options['full-context']),
@@ -263,7 +274,7 @@ async function dispatch(options) {
     history: [],
     createdAt: now(),
   };
-  assertSingleActive(task.id);
+  assertSingleActive(task);
   if (fs.existsSync(path.join(taskDir(task.id), 'task.json'))) throw new Error(`Task already exists: ${task.id}`);
   task.initialPromptPath = path.join(ensureDir(taskDir(task.id)), 'initial-request.md');
   fs.writeFileSync(task.initialPromptPath, `${promptBody}\n`);
@@ -271,7 +282,9 @@ async function dispatch(options) {
   try {
     await ensureServer(task.herdrSession);
     if (!tryReuseContext(task, { fresh: Boolean(options['new-session']) })) {
-      await launchWorker(task, null, { trustFolder: Boolean(options['trust-folder']) });
+      task.model ||= worker.id === 'zcode' ? 'GLM-5.3-Flash' : null;
+      task.effort ||= worker.id === 'zcode' ? 'low' : null;
+      await launchWorker(task, task.resumeContextSessionId || null, { trustFolder: Boolean(options['trust-folder']) });
     }
     await submit(task, promptBody);
   } catch (error) {
@@ -283,16 +296,6 @@ async function dispatch(options) {
     throw error;
   }
   return task;
-}
-
-function assertSingleActive(taskId) {
-  const tasksRoot = path.join(config().stateDir, 'tasks');
-  for (const id of fs.existsSync(tasksRoot) ? fs.readdirSync(tasksRoot) : []) {
-    const existing = readJson(path.join(tasksRoot, id, 'task.json'), null);
-    if (existing && existing.id !== taskId && ['created', 'ready', 'running', 'blocked', 'recovering', 'submission_unknown', 'cancel_pending'].includes(existing.status)) {
-      throw new Error(`Another worker task is active: ${existing.id} (${existing.status})`);
-    }
-  }
 }
 
 async function ensureWorkerAlive(task) {
@@ -537,7 +540,7 @@ async function main() {
     options['task-id'] ||= makeTaskId();
     result = await withLock('dispatch-global', () => withLock(options['task-id'], () => dispatch(options)));
   }
-  else if (['rework', 'resume'].includes(command)) {
+  else if (['rework', 'resume', 'accept'].includes(command)) {
     result = await withLock('dispatch-global', () => withLock(required(options._[0], 'task id'), () => mutations[command](options)));
   }
   else if (mutations[command]) result = await withLock(required(options._[0], 'task id'), () => mutations[command](options));
@@ -548,7 +551,7 @@ async function main() {
     assertWorker(task, agentInfo(task.herdrSession, task.paneId));
     result = { taskId: task.id, round: task.round, text: agentText(task.herdrSession, task.paneId) };
   } else if (command === 'sessions') {
-    result = listContexts(options.cwd, options.agent);
+    result = listContexts(options.cwd, options.agent, options['worker-key']);
   } else if (command === 'agents') {
     result = listAgents();
   } else if (command === 'list') {
