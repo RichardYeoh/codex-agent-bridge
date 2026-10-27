@@ -1,0 +1,34 @@
+{
+  "startedAt": "2026-10-27T02:47:36.816Z",
+  "bundle": "${USERPROFILE}/AppData/Local/Programs/ZCode/resources/glm/zcode.cjs",
+  "executable": "${USERPROFILE}/AppData/Local/Programs/ZCode/ZCode.exe",
+  "isolated": true,
+  "capabilities": {
+    "id": 1,
+    "result": {
+      "independentPlanState": true,
+      "historyFirst": true,
+      "sessionDirectorySource": true
+    }
+  },
+  "resumedSessionId": "sess_655e9b3d-2011-4e5a-b44e-e11bed61bc80",
+  "subscribe": {
+    "id": 2,
+    "result": {
+      "ack": {
+        "subscriptionId": "sub-mvq352aq-1cdmse7o-1",
+        "mode": "snapshot",
+        "logEpoch": "mvq352aq-1cdmse7o",
+        "openTiming": {
+          "version": 1,
+          "cliSessionRestoreMs": 482,
+          "initialFrameEncodeMs": 0,
+          "sessionRuntimeState": "cold",
+          "snapshotRowCount": 0
+        }
+      }
+    }
+  },
+  "exitCode": 0,
+  "finishedAt": "2026-10-27T02:47:38.481Z"
+}

@@ -1,0 +1,77 @@
+{
+  "startedAt": "2026-10-27T02:47:35.148Z",
+  "bundle": "${USERPROFILE}/AppData/Local/Programs/ZCode/resources/glm/zcode.cjs",
+  "executable": "${USERPROFILE}/AppData/Local/Programs/ZCode/ZCode.exe",
+  "isolated": true,
+  "capabilities": {
+    "id": 1,
+    "result": {
+      "independentPlanState": true,
+      "historyFirst": true,
+      "sessionDirectorySource": true
+    }
+  },
+  "create": {
+    "id": 2,
+    "result": {
+      "commandId": "<redacted-session-id>",
+      "status": "accepted",
+      "revisionAtDecision": 0,
+      "result": {
+        "type": "createSession",
+        "sessionId": "sess_655e9b3d-2011-4e5a-b44e-e11bed61bc80"
+      },
+      "memoryEnabled": false
+    }
+  },
+  "duplicate": {
+    "id": 3,
+    "result": {
+      "commandId": "<redacted-session-id>",
+      "status": "duplicate",
+      "revisionAtDecision": 0,
+      "result": {
+        "type": "createSession",
+        "sessionId": "sess_655e9b3d-2011-4e5a-b44e-e11bed61bc80"
+      },
+      "memoryEnabled": false
+    }
+  },
+  "subscribe": {
+    "id": 4,
+    "result": {
+      "ack": {
+        "subscriptionId": "sub-mvq350xk-wkly4gdr-1",
+        "mode": "snapshot",
+        "logEpoch": "mvq350xk-wkly4gdr",
+        "openTiming": {
+          "version": 1,
+          "initialFrameEncodeMs": 1,
+          "sessionRuntimeState": "warm",
+          "snapshotRowCount": 0
+        }
+      }
+    }
+  },
+  "sendText": {
+    "id": 5,
+    "result": {
+      "commandId": "<redacted-session-id>",
+      "status": "failed",
+      "revisionAtDecision": 0,
+      "reasonCode": "fault.command.executionFailed",
+      "message": "Session model must be provider-qualified: "
+    }
+  },
+  "stop": {
+    "id": 6,
+    "result": {
+      "commandId": "<redacted-session-id>",
+      "status": "accepted",
+      "revisionAtDecision": 1,
+      "memoryEnabled": false
+    }
+  },
+  "exitCode": 0,
+  "finishedAt": "2026-10-27T02:47:36.733Z"
+}

@@ -1,0 +1,16 @@
+{
+  "thread": "<redacted-controller-thread>",
+  "stateRoot": "<LOCAL_STATE_ROOT>",
+  "initialQueue": 0,
+  "sixRounds": {
+    "add": 1,
+    "update": 5,
+    "ownedAfterAck": 0
+  },
+  "pauseResumeAccept": "passed",
+  "preservedOtherQueueEntry": true,
+  "passed": true,
+  "finalQueue": 0,
+  "finalOwned": 0,
+  "initialEntriesPreserved": true
+}

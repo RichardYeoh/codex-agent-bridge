@@ -1,0 +1,16 @@
+✔ valid ports and surrounding spaces (0.8886ms)
+✔ reject "oops" (0.2057ms)
+✔ reject "" (0.0669ms)
+✔ reject "1e2" (0.0604ms)
+✔ reject "1.5" (0.0734ms)
+✔ reject "0" (0.0572ms)
+✔ reject "65536" (0.0523ms)
+✔ the restored task uses the required cbc marker exactly (0.9336ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 135.2961

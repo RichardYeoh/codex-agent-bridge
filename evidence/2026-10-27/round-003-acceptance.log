@@ -1,0 +1,17 @@
+✔ valid ports and surrounding spaces (0.6183ms)
+✔ reject "oops" (0.1736ms)
+✔ reject "" (0.0589ms)
+✔ reject "1e2" (0.0502ms)
+✔ reject "1.5" (0.0659ms)
+✖ reject "0" (0.348ms)
+✖ reject "65536" (0.0869ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 5
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 90.1526
+
+✖ failing tests:

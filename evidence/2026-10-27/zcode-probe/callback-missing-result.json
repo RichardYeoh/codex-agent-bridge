@@ -1,0 +1,36 @@
+{
+  "startedAt": "2026-10-27T02:44:20.739Z",
+  "bundle": "${USERPROFILE}/AppData/Local/Programs/ZCode/resources/glm/zcode.cjs",
+  "executable": "${USERPROFILE}/AppData/Local/Programs/ZCode/ZCode.exe",
+  "isolated": true,
+  "capabilities": {
+    "id": 1,
+    "result": {
+      "independentPlanState": true,
+      "historyFirst": true,
+      "sessionDirectorySource": true
+    }
+  },
+  "create": {
+    "id": 2,
+    "result": {
+      "commandId": "<redacted-session-id>",
+      "status": "failed",
+      "revisionAtDecision": 0,
+      "reasonCode": "fault.command.executionFailed",
+      "message": "Client request timed out: session/requestRuntimePreferences"
+    }
+  },
+  "duplicate": {
+    "id": 3,
+    "result": {
+      "commandId": "<redacted-session-id>",
+      "status": "failed",
+      "revisionAtDecision": 0,
+      "reasonCode": "fault.command.executionFailed",
+      "message": "Client request timed out: session/requestRuntimePreferences"
+    }
+  },
+  "exitCode": 0,
+  "finishedAt": "2026-10-27T02:44:36.753Z"
+}

@@ -1,0 +1,16 @@
+{
+  "thread": "<redacted-session-id>",
+  "stateRoot": "${PROJECT_ROOT}\\audit\\2026-10-27\\notification-fix\\native-state-1793082111035",
+  "initialQueue": 0,
+  "sixRounds": {
+    "add": 1,
+    "update": 5,
+    "ownedAfterAck": 0
+  },
+  "pauseResumeAccept": "passed",
+  "preservedOtherQueueEntry": true,
+  "passed": true,
+  "finalQueue": 0,
+  "finalOwned": 0,
+  "initialEntriesPreserved": true
+}

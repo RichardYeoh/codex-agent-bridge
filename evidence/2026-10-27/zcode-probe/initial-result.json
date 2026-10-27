@@ -1,0 +1,8 @@
+{
+  "startedAt": "2026-10-27T02:42:01.970Z",
+  "bundle": "${USERPROFILE}/AppData/Local/Programs/ZCode/resources/glm/zcode.cjs",
+  "isolated": true,
+  "error": "Timeout: runtime/capabilities",
+  "exitCode": 1,
+  "finishedAt": "2026-10-27T02:42:19.975Z"
+}

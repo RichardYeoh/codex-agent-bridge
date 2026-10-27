@@ -1,0 +1,243 @@
+[
+  {
+    "method": "startup/storageState",
+    "params": {
+      "schemaVersion": 1,
+      "attemptId": "<redacted-session-id>",
+      "sequence": 1,
+      "databaseId": "05e09b19fa0f3ec86926b97aed498e4900278f4b49d7ed994d36985b00a2e52e",
+      "databaseKind": "session",
+      "phase": "checking",
+      "elapsedMs": 0
+    }
+  },
+  {
+    "method": "startup/storageState",
+    "params": {
+      "schemaVersion": 1,
+      "attemptId": "<redacted-session-id>",
+      "sequence": 2,
+      "databaseId": "05e09b19fa0f3ec86926b97aed498e4900278f4b49d7ed994d36985b00a2e52e",
+      "databaseKind": "session",
+      "phase": "checking",
+      "elapsedMs": 0
+    }
+  },
+  {
+    "method": "startup/storageState",
+    "params": {
+      "schemaVersion": 1,
+      "attemptId": "<redacted-session-id>",
+      "sequence": 3,
+      "databaseId": "05e09b19fa0f3ec86926b97aed498e4900278f4b49d7ed994d36985b00a2e52e",
+      "databaseKind": "session",
+      "phase": "checking",
+      "migration": {
+        "kind": "none",
+        "executedCount": 0,
+        "committedCount": 0
+      },
+      "elapsedMs": 2
+    }
+  },
+  {
+    "method": "startup/storageState",
+    "params": {
+      "schemaVersion": 1,
+      "attemptId": "<redacted-session-id>",
+      "sequence": 4,
+      "databaseId": "05e09b19fa0f3ec86926b97aed498e4900278f4b49d7ed994d36985b00a2e52e",
+      "databaseKind": "session",
+      "phase": "committing",
+      "migration": {
+        "kind": "none",
+        "executedCount": 0,
+        "committedCount": 0,
+        "lastAppliedMigrationId": "0024_session_database_identity"
+      },
+      "elapsedMs": 4
+    }
+  },
+  {
+    "method": "startup/storageState",
+    "params": {
+      "schemaVersion": 1,
+      "attemptId": "<redacted-session-id>",
+      "sequence": 5,
+      "databaseId": "05e09b19fa0f3ec86926b97aed498e4900278f4b49d7ed994d36985b00a2e52e",
+      "databaseKind": "session",
+      "phase": "ready",
+      "migration": {
+        "kind": "none",
+        "executedCount": 0,
+        "committedCount": 0,
+        "lastAppliedMigrationId": "0024_session_database_identity"
+      },
+      "elapsedMs": 4
+    }
+  },
+  {
+    "id": 1,
+    "result": {
+      "independentPlanState": true,
+      "historyFirst": true,
+      "sessionDirectorySource": true
+    }
+  },
+  {
+    "id": "server-1",
+    "method": "session/requestRuntimePreferences",
+    "params": {
+      "sessionId": "sess_655e9b3d-2011-4e5a-b44e-e11bed61bc80",
+      "scope": "runtime-materialization"
+    },
+    "trace": {
+      "traceId": "<redacted-session-id>"
+    }
+  },
+  {
+    "id": "server-2",
+    "method": "session/requestRuntimePreferences",
+    "params": {
+      "sessionId": "sess_655e9b3d-2011-4e5a-b44e-e11bed61bc80",
+      "scope": "user-execution"
+    },
+    "trace": {
+      "traceId": "<redacted-session-id>"
+    }
+  },
+  {
+    "id": 2,
+    "result": {
+      "ack": {
+        "subscriptionId": "sub-mvq352aq-1cdmse7o-1",
+        "mode": "snapshot",
+        "logEpoch": "mvq352aq-1cdmse7o",
+        "openTiming": {
+          "version": 1,
+          "cliSessionRestoreMs": 482,
+          "initialFrameEncodeMs": 0,
+          "sessionRuntimeState": "cold",
+          "snapshotRowCount": 0
+        }
+      }
+    }
+  },
+  {
+    "method": "v4/conversation/frame",
+    "params": {
+      "wireVersion": 3,
+      "kind": "complete",
+      "deliveryKind": "initial",
+      "logicalFrameId": "sub-mvq352aq-1cdmse7o-1-lf-1",
+      "logicalFrameOrdinal": 1,
+      "topic": "conversation/sess_655e9b3d-2011-4e5a-b44e-e11bed61bc80",
+      "subscriptionId": "sub-mvq352aq-1cdmse7o-1",
+      "frame": {
+        "topic": "conversation/sess_655e9b3d-2011-4e5a-b44e-e11bed61bc80",
+        "subscriptionId": "sub-mvq352aq-1cdmse7o-1",
+        "sentAt": 1793069258218,
+        "fromSeq": 0,
+        "toSeq": 3,
+        "payload": {
+          "kind": "snapshot",
+          "snapshot": {
+            "protocolVersion": 1,
+            "sessionId": "sess_655e9b3d-2011-4e5a-b44e-e11bed61bc80",
+            "logEpoch": "mvq352aq-1cdmse7o",
+            "seq": 3,
+            "revision": 1,
+            "control": {
+              "phase": "draft",
+              "sessionEnded": false,
+              "canStop": false,
+              "stopState": "idle",
+              "stopTargetKind": "unknown",
+              "activeWorks": [],
+              "lastError": null,
+              "apiRetry": null
+            },
+            "availability": {
+              "fork": {
+                "allowed": false,
+                "reasonCode": "forkTargetNotStable"
+              },
+              "compact": {
+                "allowed": false,
+                "reasonCode": "idleCannotCompact"
+              },
+              "switchModelConfig": {
+                "allowed": true
+              },
+              "setFollowupMode": {
+                "allowed": true
+              },
+              "queueEdit": {
+                "allowed": true
+              },
+              "sendQueuedNow": {
+                "allowed": false,
+                "reasonCode": "sendQueuedNowRequiresRunning"
+              },
+              "pauseGoal": {
+                "allowed": false,
+                "reasonCode": "noGoalToPause"
+              },
+              "resumeGoal": {
+                "allowed": false,
+                "reasonCode": "noGoalToResume"
+              }
+            },
+            "inputRouting": {
+              "mode": "startNow"
+            },
+            "meta": {
+              "title": "Reply exactly ZCODE_AUDIT_OK. Do not use tools.",
+              "titleSource": "generated"
+            },
+            "config": {
+              "provider": "",
+              "model": "",
+              "thought": "",
+              "thoughtLevels": [],
+              "followupMode": "queue",
+              "mode": "build",
+              "planEnabled": false
+            },
+            "modelTransition": null,
+            "usage": {
+              "contextWindow": null,
+              "cumulative": {
+                "inputTokens": 0,
+                "outputTokens": 0,
+                "cacheReadTokens": 0,
+                "cacheWriteTokens": 0
+              }
+            },
+            "queue": {
+              "items": [],
+              "autoDrain": true
+            },
+            "pendingInteractions": [],
+            "pendingCommands": [],
+            "backgroundWorks": [],
+            "subagents": {
+              "revision": 0,
+              "childSessionIds": [],
+              "running": [],
+              "endedTotal": 0
+            },
+            "goal": null,
+            "plan": null,
+            "workspaceHookAdmission": null,
+            "rows": {
+              "window": [],
+              "totalCount": 0,
+              "firstRowId": null
+            }
+          }
+        }
+      }
+    }
+  }
+]

@@ -1,0 +1,45 @@
+✔ registry exposes the cbc worker (1.6018ms)
+✔ display names are independent of task IDs and remain unique among live agents (0.3707ms)
+✔ unknown agent names are rejected with the list of registered agents (0.7088ms)
+✔ cbc command skips permissions by default and quotes paths (0.6659ms)
+✔ cbc command honours permission mode and resume id (0.371ms)
+✔ installer owns only the delegation skill, never the official Herdr skill (1.3848ms)
+✔ uninstall preserves a skill with modified references or extra user files (27.7523ms)
+✔ fast completion is observed and a task is submitted exactly once (1057.0028ms)
+✔ uncertain submission is durable, never resent, and recover stays observational (1411.797ms)
+✔ session recovery filters identical pane IDs by task, server and launch time (45.5047ms)
+✔ worker replacement cannot silently receive a follow-up (0.3985ms)
+✔ queue success is distinct from receipt, duplicate recovery does not send twice (53.645ms)
+✔ queue failure can be repaired while an interrupted send is not blindly repeated (125.9769ms)
+✔ task mutations serialize and abandoned locks can be recovered (452.8045ms)
+✔ a replacement failure preserves the last valid state instead of truncating it (6.5009ms)
+✔ normal delegation reuses the caller pane workspace (1.3143ms)
+✔ daemon clients can explicitly select an existing workspace tab (0.3919ms)
+✔ cross-server IDs are not inherited and new workspaces require an explicit request (0.1411ms)
+✔ split geometry avoids creating narrow columns (0.116ms)
+✔ multiple rounds coalesce to one wake and acknowledging removes the queued wake (169.9855ms)
+✔ pause withdraws only bridge messages and resume does not replay accepted work (58.5704ms)
+✔ ack one task keeps another task pending; acceptance and rework prune obsolete wakes (106.7365ms)
+✔ local pending state survives notification transport failure without a resend loop (42.6782ms)
+✔ quota, rate limit and network blockers are classified without treating normal credits as errors (0.9525ms)
+✔ a lost add reply remains uncertain and is not automatically submitted again (28.8397ms)
+✔ writeJsonAtomic creates a file and leaves no temp/backup behind (5.88ms)
+✔ writeJsonAtomic replaces existing content and survives stale backup files (52.7282ms)
+✔ writeJsonAtomic creates parent directories (3.4579ms)
+✔ task ids are validated, ids and dirs stay inside the state dir (4.2037ms)
+✔ saveTask/loadTask round-trips and updates updatedAt (4.219ms)
+✔ appendJsonl appends one line per call and stays parseable (4.6278ms)
+✔ readJson returns fallback only for missing files (3.6373ms)
+✔ event() writes taskId, round and type (2.8018ms)
+✔ watcher preserves session and never resubmits after wait_timeout (426.2956ms)
+✔ watcher preserves session and never resubmits after quota (574.3046ms)
+✔ watcher preserves session and never resubmits after network (600.2131ms)
+✔ watcher preserves session and never resubmits after rate_limit (651.7346ms)
+ℹ tests 37
+ℹ suites 0
+ℹ pass 37
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3336.1499

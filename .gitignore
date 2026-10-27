@@ -1,0 +1,16 @@
+# Local state and archives / 本机状态与归档
+.local/
+agent-bridge/backups/
+agent-bridge/test-artifacts/
+node_modules/
+**/node_modules/
+__pycache__/
+*.pyc
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+*.p12
+.DS_Store
+Thumbs.db

@@ -1,0 +1,53 @@
+{
+  "startedAt": "2026-10-27T02:46:55.899Z",
+  "bundle": "${USERPROFILE}/AppData/Local/Programs/ZCode/resources/glm/zcode.cjs",
+  "executable": "${USERPROFILE}/AppData/Local/Programs/ZCode/ZCode.exe",
+  "isolated": true,
+  "capabilities": {
+    "id": 1,
+    "result": {
+      "independentPlanState": true,
+      "historyFirst": true,
+      "sessionDirectorySource": true
+    }
+  },
+  "create": {
+    "id": 2,
+    "result": {
+      "commandId": "<redacted-session-id>",
+      "status": "accepted",
+      "revisionAtDecision": 0,
+      "result": {
+        "type": "createSession",
+        "sessionId": "sess_9997ad7b-767c-471d-a5a3-31e74a85a0bf"
+      },
+      "memoryEnabled": false
+    }
+  },
+  "duplicate": {
+    "id": 3,
+    "result": {
+      "commandId": "<redacted-session-id>",
+      "status": "duplicate",
+      "revisionAtDecision": 0,
+      "result": {
+        "type": "createSession",
+        "sessionId": "sess_9997ad7b-767c-471d-a5a3-31e74a85a0bf"
+      },
+      "memoryEnabled": false
+    }
+  },
+  "subscribe": {
+    "error": {
+      "code": -32603,
+      "data": {
+        "name": "ZodError",
+        "stack": "ZodError: [\n  {\n    \"code\": \"invalid_value\",\n    \"values\": [\n      \"desktop-continuous\",\n      \"web-remote-replayable\"\n    ],\n    \"path\": [\n      \"clientMode\"\n    ],\n    \"message\": \"Invalid option: expected one of \\\"desktop-continuous\\\"|\\\"web-remote-replayable\\\"\"\n  },\n  {\n    \"code\": \"unrecognized_keys\",\n    \"keys\": [\n      \"deliveryKind\"\n    ],\n    \"path\": [],\n    \"message\": \"Unrecognized key: \\\"deliveryKind\\\"\"\n  }\n]\n    at ConversationV4Gateway.subscribeReserved (${USERPROFILE}\\AppData\\Local\\Programs\\ZCode\\resources\\glm\\zcode.cjs:15476:119667)\n    at ZCodeProtocolAgentServer.dispatchRequest (${USERPROFILE}\\AppData\\Local\\Programs\\ZCode\\resources\\glm\\zcode.cjs:15484:97050)\n    at ZCodeProtocolAgentServer.handleRequest (${USERPROFILE}\\AppData\\Local\\Programs\\ZCode\\resources\\glm\\zcode.cjs:15484:96485)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async ZCodeProtocolAgentServer.handleMessage (${USERPROFILE}\\AppData\\Local\\Programs\\ZCode\\resources\\glm\\zcode.cjs:15484:95991)\n    at async ZCodeProtocolNdjsonConnection.handleMessage (${USERPROFILE}\\AppData\\Local\\Programs\\ZCode\\resources\\glm\\zcode.cjs:15487:2757)\n    at async ${USERPROFILE}\\AppData\\Local\\Programs\\ZCode\\resources\\glm\\zcode.cjs:15487:2015"
+      },
+      "message": "[\n  {\n    \"code\": \"invalid_value\",\n    \"values\": [\n      \"desktop-continuous\",\n      \"web-remote-replayable\"\n    ],\n    \"path\": [\n      \"clientMode\"\n    ],\n    \"message\": \"Invalid option: expected one of \\\"desktop-continuous\\\"|\\\"web-remote-replayable\\\"\"\n  },\n  {\n    \"code\": \"unrecognized_keys\",\n    \"keys\": [\n      \"deliveryKind\"\n    ],\n    \"path\": [],\n    \"message\": \"Unrecognized key: \\\"deliveryKind\\\"\"\n  }\n]"
+    },
+    "id": 4
+  },
+  "exitCode": 0,
+  "finishedAt": "2026-10-27T02:46:59.166Z"
+}

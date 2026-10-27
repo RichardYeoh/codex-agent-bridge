@@ -1,0 +1,35 @@
+✔ registry exposes the cbc worker (1.6685ms)
+✔ display names are independent of task IDs and remain unique among live agents (0.2469ms)
+✔ unknown agent names are rejected with the list of registered agents (0.7932ms)
+✔ cbc command skips permissions by default and quotes paths (0.4114ms)
+✔ cbc command honours permission mode and resume id (0.225ms)
+✔ installer owns only the delegation skill, never the official Herdr skill (0.9168ms)
+✔ uninstall preserves a skill with modified references or extra user files (23.0567ms)
+✔ fast completion is observed and a task is submitted exactly once (938.588ms)
+✔ uncertain submission is durable, never resent, and recover stays observational (1305.3013ms)
+✔ session recovery filters identical pane IDs by task, server and launch time (4.0038ms)
+✔ worker replacement cannot silently receive a follow-up (0.3091ms)
+✔ queue success is distinct from receipt, duplicate recovery does not send twice (84.8366ms)
+✔ queue failure can be repaired while an interrupted send is not blindly repeated (153.2771ms)
+✔ task mutations serialize and abandoned locks can be recovered (463.6849ms)
+✔ a replacement failure preserves the last valid state instead of truncating it (5.2184ms)
+✔ normal delegation reuses the caller pane workspace (1.3381ms)
+✔ daemon clients can explicitly select an existing workspace tab (0.4184ms)
+✔ cross-server IDs are not inherited and new workspaces require an explicit request (0.1544ms)
+✔ split geometry avoids creating narrow columns (0.1166ms)
+✔ writeJsonAtomic creates a file and leaves no temp/backup behind (4.8537ms)
+✔ writeJsonAtomic replaces existing content and survives stale backup files (8.3035ms)
+✔ writeJsonAtomic creates parent directories (2.8036ms)
+✔ task ids are validated, ids and dirs stay inside the state dir (1.8567ms)
+✔ saveTask/loadTask round-trips and updates updatedAt (2.5302ms)
+✔ appendJsonl appends one line per call and stays parseable (2.8908ms)
+✔ readJson returns fallback only for missing files (1.7585ms)
+✔ event() writes taskId, round and type (3.0264ms)
+ℹ tests 27
+ℹ suites 0
+ℹ pass 27
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3085.0688
