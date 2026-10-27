@@ -1,10 +1,12 @@
 {
   "name": "codex-agent-bridge",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "private": true,
   "description": "Codex-led external agent orchestration through Herdr",
   "license": "UNLICENSED",
-  "workspaces": ["agent-bridge"],
+  "workspaces": [
+    "agent-bridge"
+  ],
   "scripts": {
     "test": "npm --workspace agent-bridge test",
     "test:e2e": "node tools/run-e2e.cjs",
@@ -12,5 +14,7 @@
     "install:skills": "node agent-bridge/scripts/install.js install-skills",
     "install:integration": "node agent-bridge/scripts/install.js install"
   },
-  "engines": {"node": ">=20"}
+  "engines": {
+    "node": ">=20"
+  }
 }

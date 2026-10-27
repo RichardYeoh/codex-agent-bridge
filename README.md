@@ -1,8 +1,8 @@
 # Codex Agent Bridge
 
-以Codex为主控，通过Herdr管理外部执行Agent。Codex负责规划、核心开发、派工、独立审查和最终验收；执行Agent负责明确、可验证的子任务。当前执行端为CodeBuddy CLI（cbc），后续按统一契约接入其他Agent。
+以Codex为主控，通过Herdr管理外部执行Agent。Codex负责规划、核心开发、派工、独立审查和最终验收；CBC与ZCode执行明确、可验证的子任务，后续按统一契约接入其他Agent。
 
-当前版本：0.2.2。运行环境：原生Windows、Node.js 20及以上、PowerShell、Herdr、Codex CLI与CBC CLI。已验证环境与技术限制见[审核报告](Codex审核报告.md)。公开源码不包含认证配置或本机原始会话。
+当前版本：0.3.0。CBC要求Node.js 20及以上；ZCode执行端使用Node.js 24及以上、已登录并启用远控的ZCode Desktop。运行环境保持原生Windows、PowerShell与Herdr。公开源码不包含认证配置或本机原始会话。
 
 GitHub仓库：[RichardYeoh/codex-agent-bridge](https://github.com/RichardYeoh/codex-agent-bridge)。验证工作流使用Windows运行器，执行自动回归和交付验收。
 
@@ -29,10 +29,14 @@ npm run install:integration
 
 1. 在Herdr中打开实际项目的Workspace，启动或恢复Codex。
 2. 用自然语言要求Codex将明确工作交给CBC，说明允许修改的范围和验收要求。例如：“把这个数据转换脚本交给CBC实现，由你检查真实改动并运行验收，通过后继续原计划。”
-3. Codex使用delegate-worker编写任务书，在当前Workspace的Pane或Tab启动cbc。默认单任务；明确隔离或独立Worktree时才新建Workspace。
+3. Codex使用delegate-worker编写结构化任务书，在当前Workspace的Pane或Tab运行指定执行者。默认单任务；明确隔离或独立Worktree时才新建Workspace。
 4. 交付只进入review_pending，由Codex独立验收；不通过时原会话rework，通过后accept并继续主计划。
 
 派工不会等待整个任务完成。事件监听和队列操作由程序执行，避免模型反复轮询。双方仍分别消耗自身账户额度；任务范围与独立验收由Codex负责。
+
+任务规格包含目标、背景、参考输入、允许修改范围、实施约束、客观验收和交付物。新派工必须提供--spec-file，缺项在启动前报错。Codex先查询sessions台账，首次提供完整上下文；经核实的同一会话后续使用差量，并保留每轮范围与验收。相同Agent名不代表相同会话；闭合旧任务后优先复用存活且身份一致的执行者，--new-session可明确重开。已关闭Pane的跨任务自动续接暂未实现，原任务resume仍可恢复保存的会话。
+
+ZCode使用Desktop Host的原生Remote Relay/RPC，日常不需要浏览器操作技能，不需要另外提供DeepSeek或Z.ai API key。默认GLM-5.3-Flash、low；繁忙或断网时保留会话，不自动换模型。首次绑定、权限选项、人工接管及技术边界见[ZCode接入说明](docs/ZCode接入与方案选择.md)。
 
 ## 状态、暂停与恢复
 
@@ -61,7 +65,7 @@ node $bridge notifications resume --codex-thread $env:CODEX_THREAD_ID
 
 处理未完成任务时补充任务ID和原状态根。更换Codex线程时先暂停旧线程提醒，再显式recover绑定新线程，不重新派发同一任务。技能修改从agent-bridge/skills/delegate-worker开始，再运行install:skills。
 
-[执行Agent适配契约](agent-bridge/docs/adapter-contract.md)保留启动、状态、追加要求、结果、取消和会话恢复语义。ZCode目前完成调查与最小app-server协议实验，认证、模型及套餐权益未完成验证，尚未注册执行适配器；不提前实现未经验证的Desktop RPC。
+[执行Agent适配契约](agent-bridge/docs/adapter-contract.md)保留启动、状态、追加要求、结果、取消和会话恢复语义。ZCode已通过Desktop Start Plan真实文本、文件任务、同会话返工、Pane恢复、增量上下文及取消测试；接口来自官方内部实现，已固定源码版本，Desktop升级需复验。
 
 ## 交付与证据
 
@@ -76,6 +80,6 @@ node $bridge notifications resume --codex-thread $env:CODEX_THREAD_ID
 
 当前公开历史记录已去除本机账户路径和运行会话标识，原始记录在迁移机器的.local归档中。克隆GitHub仓库可获得继续开发所需源码、文档和测试；恢复本机旧任务还需要本地状态及Agent原生会话存储。
 
-已验证：38项回归、8项交付验收，以及原生队列CRUD。0.2.1以后通知的空闲自动唤醒仍需真实补验；整机重启、所有权限/取消分支和长期无人值守未全面验证。Codex实验性队列接口在0.164.0验证，升级后需复验。
+当前验证结果见[evidence/2026-10-27-integration](evidence/2026-10-27-integration/README.md)，原8项交付验收保留。新版通知的空闲自动唤醒仍需真实补验；整机重启、所有权限分支和长期无人值守未全面验证。Codex实验性队列接口在0.164.0验证，升级后需复验。
 
 仓库公开可见，当前未授予开源许可证；是否添加许可证另行确定。

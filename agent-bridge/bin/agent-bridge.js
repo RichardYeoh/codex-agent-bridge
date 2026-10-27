@@ -13,6 +13,9 @@ const {
 const { getAgent, listAgents, chooseAgentName } = require('../lib/agents');
 const { assertWorker, updateWorkerSession } = require('../lib/worker');
 const { placementFor, createLocation } = require('../lib/location');
+const { writeWorkerPolicy, normalizeTaskSpec, renderRoundInstructions, renderSubmissionPointer } = require('../lib/worker-policy');
+const { recordContext, preparePromptContext, tryReuseContext, listContexts } = require('../lib/worker-context');
+const { writeLease } = require('../lib/worker-lease');
 
 function missingWorker(error) {
   return ['agent_not_found', 'pane_not_found', 'agent_not_registered'].includes(error.herdrCode);
@@ -27,7 +30,7 @@ function parse(argv) {
       continue;
     }
     const key = arg.slice(2);
-    if (['json', 'force', 'trust-folder', 'no-skip-permissions', 'resend-notification', 'new-workspace'].includes(key)) options[key] = true;
+    if (['json', 'force', 'trust-folder', 'no-skip-permissions', 'resend-notification', 'new-workspace', 'new-session', 'full-context'].includes(key)) options[key] = true;
     else options[key] = argv[++i];
   }
   return options;
@@ -80,7 +83,7 @@ async function waitForAgent(task, desired, timeoutMs, baselineCompletion) {
       if (desired.includes(agent.agent_status)) return agent;
       if (baselineCompletion !== undefined && agent.completion_seq > baselineCompletion) return agent;
       if (agent.agent_status === 'blocked' && !desired.includes('blocked')) {
-        const error = new Error('CBC is blocked by a permission or question prompt; inspect the Herdr pane');
+        const error = new Error(`${task.agent} is blocked by a permission or question prompt; inspect the Herdr pane`);
         error.code = 'AGENT_BRIDGE_BLOCKED';
         throw error;
       }
@@ -107,6 +110,8 @@ async function launchWorker(task, resumeId, { trustFolder = false } = {}) {
   delete task.agentNameReleased;
   task.workerStartedAt = now();
   task.agentName = null;
+  writeWorkerPolicy(task);
+  writeLease(task);
   saveTask(task);
   api(task.herdrSession, ['pane', 'run', task.paneId, launchCommand(task, resumeId)]);
 
@@ -128,6 +133,11 @@ async function launchWorker(task, resumeId, { trustFolder = false } = {}) {
     }
     try {
       const agent = agentInfo(task.herdrSession, task.paneId);
+      if (agent.agent_status === 'blocked') {
+        const error = new Error(getAgent(task.agent).readBlocker?.(task)?.message || 'Worker requires input during startup');
+        error.code = 'AGENT_BRIDGE_BLOCKED';
+        throw error;
+      }
       if (['idle', 'done', 'working'].includes(agent.agent_status)) {
         const live = resultPayload(api(task.herdrSession, ['agent', 'list'])).agents;
         task.agentName = chooseAgentName(task.agent, live, task.paneId);
@@ -135,29 +145,19 @@ async function launchWorker(task, resumeId, { trustFolder = false } = {}) {
         api(task.herdrSession, ['pane', 'rename', task.paneId, getAgent(task.agent).displayName || task.agent]);
         task.terminalId = agent.terminal_id;
         updateWorkerSession(task);
+        writeLease(task);
         task.status = 'ready';
         saveTask(task);
         return;
       }
-    } catch {}
+    } catch (error) { if (error.code === 'AGENT_BRIDGE_BLOCKED') throw error; }
     await sleep(400);
   }
   throw new Error(`Worker did not register within 120s (pane ${task.paneId})`);
 }
 
 function deliveryInstructions(task) {
-  return [
-    '你是由 Codex 委派的独立执行 Agent（通过 agent-bridge 调度）。请完成本文件末尾的任务，并以真实文件和测试结果为准。',
-    `工作目录：${task.cwd}`,
-    '未经任务明确要求，不修改其他目录，不修改任何 Codex 配置。',
-    '交付前必须将 Markdown 交付报告写到以下绝对路径：',
-    task.deliveryPath,
-    '报告包含：完成内容、修改文件、实际执行的命令与结果、测试证据、未解决项、当前返工轮次。',
-    '不得只声称完成；如果无法完成任务或无法写报告，在报告中明确说明阻塞原因。',
-    '你的最终回复只写一行：交付报告路径。',
-    '',
-    '=== 任务与验收要求 ===',
-  ].join('\n');
+  return renderRoundInstructions(task);
 }
 
 async function submit(task, promptBody, { activityTimeoutMs = 20000, startWatcherFn = startWatcher } = {}) {
@@ -172,7 +172,10 @@ async function submit(task, promptBody, { activityTimeoutMs = 20000, startWatche
   const round = String(task.round).padStart(3, '0');
   task.promptPath = path.join(dir, `round-${round}-prompt.md`);
   task.deliveryPath = path.join(dir, 'deliveries', `round-${round}.md`);
+  task.promptBody = promptBody;
   ensureDir(path.dirname(task.deliveryPath));
+  writeWorkerPolicy(task);
+  preparePromptContext(task, promptBody);
   fs.writeFileSync(task.promptPath, `${deliveryInstructions(task)}\n${promptBody}\n`);
   task.status = 'running';
   task.submission = { status: 'preparing', baselineCompletion: before.completion_seq || 0 };
@@ -180,14 +183,15 @@ async function submit(task, promptBody, { activityTimeoutMs = 20000, startWatche
   task.history.push({ round: task.round, status: 'submitted', timestamp: now() });
   saveTask(task);
 
-  const pointer = `请读取任务文件 ${task.promptPath} 并严格按文件要求执行任务，完成后按文件内要求生成交付报告。不要在回复中复述任务内容。`;
+  const pointer = renderSubmissionPointer(task);
   // Submission is never retried on an ambiguous timeout. / 提交超时结果不确定时禁止自动重发。
   task.submission.status = 'sending';
   saveTask(task);
   try {
-    if (getAgent(task.agent).promptMode === 'pane-input') {
+    if (['pane-input', 'file-input'].includes(getAgent(task.agent).promptMode)) {
       // CBC is hook-recognized, not a native Herdr agent kind. / CBC 由 hook 识别，尚非 Herdr 原生 Agent 类型。
-      api(task.herdrSession, ['pane', 'send-text', task.paneId, pointer]);
+      api(task.herdrSession, ['pane', 'send-text', task.paneId,
+        getAgent(task.agent).promptMode === 'file-input' ? task.promptPath : pointer]);
       await sleep(600);
       api(task.herdrSession, ['pane', 'send-keys', task.paneId, 'enter']);
     } else {
@@ -204,15 +208,19 @@ async function submit(task, promptBody, { activityTimeoutMs = 20000, startWatche
     throw error;
   }
   updateWorkerSession(task);
+  writeLease(task);
   task.notification = { status: 'pending', round: task.round };
   saveTask(task);
+  recordContext(task);
   task.watcherPid = startWatcherFn(task.id);
   saveTask(task);
   event(task, 'submitted', { paneId: task.paneId, round: task.round, watcherPid: task.watcherPid });
 }
 
 async function dispatch(options) {
-  const promptBody = promptFrom(options);
+  if (!options['spec-file']) throw new Error('New delegation requires --spec-file with a complete task-spec-v1 specification');
+  const taskSpec = normalizeTaskSpec(readJson(path.resolve(options['spec-file'])));
+  const promptBody = options['prompt-file'] || options.prompt ? promptFrom(options) : taskSpec.goal;
   const waitTimeoutMs = Number(options['wait-timeout-ms'] ?? process.env.AGENT_BRIDGE_WAIT_TIMEOUT_MS ?? 1800000);
   if (!Number.isSafeInteger(waitTimeoutMs) || waitTimeoutMs < 0 || waitTimeoutMs > 86400000) {
     throw new Error('--wait-timeout-ms must be 0 (unbounded) or milliseconds up to one day');
@@ -223,20 +231,32 @@ async function dispatch(options) {
   const cwd = path.resolve(required(options.cwd, 'cwd'));
   if (!fs.existsSync(cwd) || !fs.statSync(cwd).isDirectory()) throw new Error(`Invalid cwd: ${cwd}`);
   const worker = getAgent(options.agent || 'cbc');
+  let zcodeConfig, zcodeBindingSha256;
+  if (worker.id === 'zcode') {
+    if (Number(process.versions.node.split('.')[0]) < 24) throw new Error('ZCode Desktop adapter requires Node.js 24 or later');
+    zcodeConfig = path.resolve(options['zcode-config'] || process.env.AGENT_BRIDGE_ZCODE_CONFIG
+      || path.join(config().stateDir, 'zcode-desktop.json'));
+    const binding = require('../lib/zcode-remote').readBinding(zcodeConfig);
+    zcodeBindingSha256 = require('node:crypto').createHash('sha256').update(JSON.stringify(binding)).digest('hex');
+  }
   const herdrSession = options.session || config().defaultSession;
   const task = {
     schemaVersion: 1,
     id: options['task-id'] || makeTaskId(),
     agent: worker.id,
+    ...(zcodeConfig ? { zcodeConfig, zcodeBindingSha256 } : {}),
     placement: placementFor(options),
     cwd,
     herdrSession,
     stateDir: config().stateDir,
     permissionMode: options['permission-mode'] || config().defaultPermissionMode,
     skipPermissions: !options['no-skip-permissions'],
-    model: options.model || null,
-    effort: options.effort || null,
+    model: options.model || (worker.id === 'zcode' ? 'GLM-5.3-Flash' : null),
+    effort: options.effort || (worker.id === 'zcode' ? 'low' : null),
     waitTimeoutMs,
+    taskSpec,
+    forceFullContext: Boolean(options['full-context']),
+    allowedWritePaths: taskSpec.allowedChanges,
     codexThread: options['codex-thread'] || detectCodexThread(herdrSession),
     round: 0,
     status: 'created',
@@ -250,7 +270,9 @@ async function dispatch(options) {
   saveTask(task);
   try {
     await ensureServer(task.herdrSession);
-    await launchWorker(task, null, { trustFolder: Boolean(options['trust-folder']) });
+    if (!tryReuseContext(task, { fresh: Boolean(options['new-session']) })) {
+      await launchWorker(task, null, { trustFolder: Boolean(options['trust-folder']) });
+    }
     await submit(task, promptBody);
   } catch (error) {
     if (task.status !== 'submission_unknown') task.status = error.code === 'AGENT_BRIDGE_BLOCKED' ? 'blocked' : 'failed';
@@ -279,7 +301,7 @@ async function ensureWorkerAlive(task) {
     return;
   } catch (error) { if (!missingWorker(error)) throw error; }
   if (!task.workerSessionId) {
-    throw new Error('Worker pane is gone and no CBC session ID was captured; start a new dispatch instead');
+    throw new Error('Worker pane is gone and no worker session ID was captured; inspect session records before a new dispatch');
   }
   await launchWorker(task, task.workerSessionId, { trustFolder: true });
 }
@@ -292,6 +314,11 @@ async function rework(options) {
   if (task.watcherPid && processAlive(task.watcherPid)) throw new Error('A watcher is still active for this task');
   await ensureServer(task.herdrSession);
   await ensureWorkerAlive(task);
+  task.forceFullContext = Boolean(options['full-context']);
+  if (options['spec-file']) {
+    task.taskSpec = normalizeTaskSpec(readJson(path.resolve(options['spec-file'])));
+    task.allowedWritePaths = task.taskSpec.allowedChanges;
+  }
   await submit(task, promptFrom(options));
   return task;
 }
@@ -351,7 +378,7 @@ async function resume(options) {
     if (!missingWorker(error)) throw error;
     const promptBody = pendingRoundPrompt(task);
     if (!task.workerSessionId || !promptBody) {
-      throw new Error('Worker pane is gone and no CBC session ID or pending prompt could be recovered');
+      throw new Error('Worker pane is gone and no worker session ID or pending prompt could be recovered');
     }
     await launchWorker(task, task.workerSessionId, { trustFolder: true });
     relaunched = true;
@@ -361,9 +388,14 @@ async function resume(options) {
   task.history.push({ round: task.round, status: 'resumed', timestamp: now(), relaunched });
   delete task.blocker;
   saveTask(task);
-  if (relaunched || task.round === 0) {
+  if ((relaunched && getAgent(task.agent).replayOnRelaunch !== false) || task.round === 0) {
     await submit(task, pendingRoundPrompt(task));
     return task;
+  }
+  if (!relaunched && getAgent(task.agent).resumeInput) {
+    api(task.herdrSession, ['pane', 'send-text', task.paneId, getAgent(task.agent).resumeInput]);
+    api(task.herdrSession, ['pane', 'send-keys', task.paneId, 'enter']);
+    await waitForAgent(task, ['working', 'idle', 'done'], 20000);
   }
   task.watcherPid = startWatcher(task.id);
   saveTask(task);
@@ -378,6 +410,7 @@ function accept(options) {
   task.history.push({ round: task.round, status: 'accepted', timestamp: now() });
   saveTask(task);
   event(task, 'accepted');
+  recordContext(task);
   try {
     assertWorker(task, agentInfo(task.herdrSession, task.paneId));
     api(task.herdrSession, ['pane', 'rename', task.paneId, getAgent(task.agent).displayName || task.agent]);
@@ -514,6 +547,8 @@ async function main() {
     const task = loadTask(required(options._[0], 'task id'));
     assertWorker(task, agentInfo(task.herdrSession, task.paneId));
     result = { taskId: task.id, round: task.round, text: agentText(task.herdrSession, task.paneId) };
+  } else if (command === 'sessions') {
+    result = listContexts(options.cwd, options.agent);
   } else if (command === 'agents') {
     result = listAgents();
   } else if (command === 'list') {
@@ -522,7 +557,7 @@ async function main() {
       .filter(id => fs.existsSync(path.join(root, id, 'task.json')))
       .map(id => readJson(path.join(root, id, 'task.json'))) : [];
   } else {
-    throw new Error('Usage: agent-bridge <dispatch|rework|resume|status|read|cancel|accept|ack|recover|notifications|list|agents> [options]');
+    throw new Error('Usage: agent-bridge <dispatch|rework|resume|status|read|cancel|accept|ack|recover|notifications|list|agents|sessions> [options]');
   }
   if (['accept', 'cancel', 'rework', 'resume'].includes(command) && result.codexThread) {
     try { await require('../lib/notification-control').reconcileThread(result.codexThread); }

@@ -8,6 +8,8 @@ const { event, loadTask, now, saveTask, taskDir, withLock } = require('../lib/ut
 const { notifyTask } = require('../lib/notify');
 const { assertWorker, updateWorkerSession } = require('../lib/worker');
 const { classifyBlocker } = require('../lib/blocker');
+const { getAgent } = require('../lib/agents');
+const { recordContext } = require('../lib/worker-context');
 
 function readTerminal(task) {
   const response = api(task.herdrSession, [
@@ -49,18 +51,21 @@ async function main() {
     const payload = resultPayload(response);
     const agent = assertWorker(task, payload?.agent || agentInfo(task.herdrSession, task.paneId));
     task.completionSeq = agent.completion_seq || null;
+    const promptContext = getAgent(task.agent).readPromptContext?.(task);
+    if (promptContext) task.promptContext = promptContext;
     updateWorkerSession(task);
     saveTerminal(task);
 
     if (agent.agent_status === 'blocked') {
       task.status = 'blocked';
-      task.blocker = classifyBlocker(task.terminalPath ? fs.readFileSync(task.terminalPath, 'utf8') : '');
-      task.error = task.blocker?.message || 'CBC requires permission or user input; inspect the Herdr pane';
+      task.blocker = getAgent(task.agent).readBlocker?.(task)
+        || classifyBlocker(task.terminalPath ? fs.readFileSync(task.terminalPath, 'utf8') : '');
+      task.error = task.blocker?.message || `${task.agent} requires permission or user input; inspect the Herdr pane`;
     } else if (!task.deliveryPath || !fs.existsSync(task.deliveryPath)) {
       const blocker = classifyBlocker(task.terminalPath ? fs.readFileSync(task.terminalPath, 'utf8') : '');
       task.status = blocker ? 'blocked' : 'delivery_missing';
       task.blocker = blocker;
-      task.error = blocker?.message || 'CBC became idle without writing the required delivery report';
+      task.error = blocker?.message || `${task.agent} became idle without writing the required delivery report`;
     } else {
       task.status = 'review_pending';
       task.error = null;
@@ -69,6 +74,7 @@ async function main() {
     task.settlementSeq = (task.settlementSeq || 0) + 1;
     task.history.push({ round, status: task.status, timestamp: now(), completionSeq: task.completionSeq });
     saveTask(task);
+    recordContext(task);
     event(task, 'settled', { status: task.status, completionSeq: task.completionSeq });
     await notifyTask(task);
     });

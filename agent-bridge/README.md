@@ -1,4 +1,4 @@
-# 协调器操作说明 0.2.2
+# 协调器操作说明 0.3.0
 
 项目定位、安装、维护与发布见[根目录README](../README.md)。在项目根目录运行npm ci；全部依赖由根package-lock.json锁定。
 
@@ -7,7 +7,8 @@
 ```powershell
 $bridge = Join-Path $PWD 'agent-bridge/bin/agent-bridge.js'
 node $bridge dispatch --session default --workspace <已核实的项目WorkspaceID> `
-  --cwd <业务项目目录> --task-id <任务ID> --codex-thread $env:CODEX_THREAD_ID --prompt-file <任务书>
+  --cwd <业务项目目录> --task-id <任务ID> --codex-thread $env:CODEX_THREAD_ID --spec-file <任务规格JSON>
+node $bridge sessions --cwd <业务项目目录> --agent cbc
 node $bridge status <任务ID>
 node $bridge read <任务ID>
 node $bridge ack <任务ID> --key <当前事件key>
@@ -15,7 +16,9 @@ node $bridge rework <任务ID> --prompt-file <返工要求>
 node $bridge accept <任务ID>
 ```
 
-也可用--pane指定调用Pane，创建同级Pane。明确隔离才用--new-workspace --isolation-reason。执行显示名cbc，任务ID独立；已有同类执行者时显示名加短编号。
+也可用--pane指定调用Pane，创建同级Pane。明确隔离才用--new-workspace --isolation-reason。执行显示名cbc或zcode，任务ID独立；已有同类执行者时显示名加短编号。默认CBC，加--agent zcode选择Desktop执行端。
+
+规格写法见[模板](skills/delegate-worker/references/task-brief-template.md)。goal、background、inputs、allowedChanges、requirements、acceptance和deliverables必填，按需补steps、preserve、examples、edgeCases、nonGoals、stopConditions。projectContext保存可复用的稳定项目背景。默认尝试复用同项目的已验收、存活且会话身份一致的worker，--new-session明确重开。首轮完整，后续核实上下文后发送差量；缺少交付、身份不符或上下文变化时不使用未经确认的回执。正式需求变更时rework同时传--spec-file。
 
 目录信任已获授权时可添加--trust-folder。CBC默认-y；需要保留权限检查时传--no-skip-permissions --permission-mode acceptEdits。可传--model和--effort，不修改全局默认。cwd与--add-dir不是操作系统沙箱。
 
@@ -34,7 +37,7 @@ node $bridge notifications resume --codex-thread <线程ID>
 node $bridge notifications reconcile --codex-thread <线程ID>
 ```
 
-命令均须使用原AGENT_BRIDGE_STATE_DIR；普通终端显式传线程ID。recover对账、恢复死亡watcher及处理明确失败通知，不因连接错误自动重发。resume在存活Pane上恢复监听；需要继续要求时rework。确认原执行状态且可以重试后才使用resume --force；原Workspace丢失时可额外指定--workspace或--pane。
+命令均须使用原AGENT_BRIDGE_STATE_DIR；普通终端显式传线程ID。recover对账、恢复死亡watcher及处理明确失败通知，不因连接错误自动重发。resume恢复监听；ZCode还重连权威快照，并在重建Pane时观察原commandId，不自动重发原任务。需要继续要求时rework。确认原执行状态且可以重试后才使用resume --force；原Workspace丢失时可额外指定--workspace或--pane。
 
 网络、限流、额度错误和等待超时保留原会话/轮次，进入blocked。默认监听1800000毫秒，派工--wait-timeout-ms或AGENT_BRIDGE_WAIT_TIMEOUT_MS可调整，0为显式无限等待。超时不表示原执行停止，不杀worker、不自动重派；协调器不控制CBC自身内部网络重试。
 
@@ -50,8 +53,11 @@ queued只表示入队，acknowledged表示主控确认。Codex 0.164.0原生thre
 | AGENT_BRIDGE_CODEX_JS | Codex JS入口，用于连接本机app-server proxy |
 | AGENT_BRIDGE_PERMISSION_MODE | 非跳过模式的默认权限模式 |
 | AGENT_BRIDGE_WAIT_TIMEOUT_MS | 新任务每轮监听上限，派工参数优先 |
+| AGENT_BRIDGE_ZCODE_CONFIG | ZCode私有连接JSON路径，派工--zcode-config优先 |
 
-Agent描述在lib/agents.js，位置在lib/location.js，身份与会话在lib/worker.js，通知在lib/notify.js、lib/notification-control.js、lib/codex-client.js，错误分类在lib/blocker.js。唯一第三方运行依赖为ws@8.22.0。
+Agent描述在lib/agents.js，位置在lib/location.js，身份与会话在lib/worker.js，规则/规格在lib/worker-policy.js，上下文回执在lib/worker-context.js，Pane任务租约在lib/worker-lease.js。ZCode传输与会话观察在lib/zcode-remote.js，终端适配器在bin/zcode-worker.js，单次权限接管在bin/zcode-control.js。通知与验收继续复用公共实现。安装依赖为ws@8.22.0，另有固定版本的ZCode协议子集与zod置于vendor/zcode，许可证及重建方法随文件提供。
+
+ZCode默认Flash/low，跳过权限时为yolo；需权限检查时--no-skip-permissions --permission-mode edit。Start Plan要求Desktop已登录并开启官方远控，连接JSON默认位于状态根zcode-desktop.json。具体配置和路线比较见[接入说明](../docs/ZCode接入与方案选择.md)。
 
 技能更新先改skills/delegate-worker，再从根目录npm run install:skills；只有需要写CBC Hook配置时才install:integration，安装前会备份，不覆盖官方Herdr技能。
 

@@ -14,6 +14,7 @@ for (const file of files) {
   if (data.includes(0)) continue;
   const text = data.toString('utf8');
   if (secret.test(text)) problems.push(`${file}: possible secret`);
+  if (/remote\/v4\?[^\s"'<>]*\bsid=d_[A-Za-z0-9]{8,}/.test(text)) problems.push(`${file}: private remote binding`);
   if (/[A-Za-z]:[\\/]+Users[\\/]+(?!Public(?:[\\/]|$)|Default(?:[\\/]|$)|<|\$|%)[A-Za-z0-9_.-]+[\\/]/.test(text)) {
     problems.push(`${file}: account-specific absolute path`);
   }

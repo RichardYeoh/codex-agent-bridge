@@ -20,6 +20,16 @@ function updateWorkerSession(task) {
   const file = path.join(task.stateDir, 'hook-events.ndjson');
   if (!fs.existsSync(file)) return;
   const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/).filter(Boolean);
+  for (const line of lines) {
+    try {
+      const entry = JSON.parse(line);
+      if (entry.taskId === task.id && entry.herdrSession === task.herdrSession && entry.paneId === task.paneId
+          && entry.source === 'compact' && (!task.workerStartedAt || entry.timestamp >= task.workerStartedAt)
+          && (!task.contextInvalidatedAt || entry.timestamp > task.contextInvalidatedAt)) {
+        task.contextInvalidatedAt = entry.timestamp;
+      }
+    } catch {}
+  }
   for (let i = lines.length - 1; i >= 0; i -= 1) {
     try {
       const entry = JSON.parse(lines[i]);
@@ -31,6 +41,7 @@ function updateWorkerSession(task) {
           throw new Error('Worker session changed unexpectedly');
         }
         task.workerSessionId = entry.sessionId;
+        if (entry.name === 'SessionStart' && entry.source === 'compact') task.contextInvalidatedAt = entry.timestamp;
         return;
       }
     } catch (error) {

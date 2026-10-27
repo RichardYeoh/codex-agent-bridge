@@ -1,0 +1,63 @@
+{
+  "date": "2026-10-27",
+  "version": "0.3.0",
+  "environment": {
+    "platform": "Windows 11",
+    "node": "24.14.0",
+    "herdr": "0.9.5",
+    "cbc": "2.177.0",
+    "zcodeDesktop": "3.16.3",
+    "zcodeAgent": "0.17.0"
+  },
+  "cbc": {
+    "samePane": true,
+    "rememberedWordVerified": true,
+    "secondPromptOmitsMemoryWord": true,
+    "bothAccepted": true,
+    "firstPromptChars": 2531,
+    "secondPromptChars": 1926,
+    "sameSession": true,
+    "firstMode": "full",
+    "secondMode": "delta"
+  },
+  "zcode": {
+    "route": "Desktop Remote Relay V2 / Host RPC",
+    "provider": "account:zai-start-plan",
+    "model": "GLM-5.3-Flash",
+    "reasoningLevel": "low",
+    "textResponseVerified": true,
+    "fileAcceptanceVerified": true,
+    "rounds": 3,
+    "sameSession": true,
+    "distinctCommands": 3,
+    "paneRecoveryWithoutReplay": true,
+    "finalPromptMode": "delta",
+    "finalPromptOmitsMemoryWord": true,
+    "contextRecallVerified": true,
+    "accepted": true,
+    "explicitOneTimeApprovalVerified": true,
+    "nativeCommandQueryVerified": true,
+    "cancel": {
+      "taskStatus": "cancelled",
+      "phase": "completedInterrupted",
+      "canStop": false,
+      "activeWorks": 0,
+      "interruptedTurnObserved": true
+    },
+    "activePaneRecoveryAndCancel": {
+      "sameSession": true,
+      "sameRound": true,
+      "newPane": true,
+      "status": "cancelled",
+      "authoritativePhase": "completedInterrupted",
+      "activeWorks": 0
+    }
+  },
+  "notVerified": [
+    "native Codex queue idle wake after current upgrade",
+    "full machine restart",
+    "long-duration unattended operation",
+    "all permission branches",
+    "real quota exhaustion"
+  ]
+}

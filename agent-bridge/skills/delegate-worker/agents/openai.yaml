@@ -1,4 +1,4 @@
 interface:
   display_name: "Herdr 外部任务委派"
-  short_description: "通过 Herdr 委派独立 CBC 任务，持续返工并按真实交付和测试验收"
-  default_prompt: "使用 $delegate-worker 将明确、可验证的工作交给 CBC，收到通知后独立验收并继续主计划。"
+  short_description: "通过 Herdr 委派 CBC 或 ZCode，核实会话并按真实交付验收"
+  default_prompt: "使用 $delegate-worker 编写明确任务规格，委派给指定的 CBC 或 ZCode；复用已核实的上下文，收到通知后独立验收并继续主计划。"

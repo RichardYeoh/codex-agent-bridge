@@ -1,0 +1,17 @@
+{
+  "results": [
+    {
+      "name": "regression",
+      "exitCode": 0,
+      "pass": 62,
+      "fail": 0
+    },
+    {
+      "name": "acceptance",
+      "exitCode": 0,
+      "pass": 8,
+      "fail": 0
+    }
+  ],
+  "sdkRebuildIdentical": true
+}

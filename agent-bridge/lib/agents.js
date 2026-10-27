@@ -1,6 +1,7 @@
 'use strict';
 
-const { config, psQuote, taskDir } = require('./util');
+const path = require('node:path');
+const { config, psQuote, taskDir, readJson } = require('./util');
 
 // Worker launch metadata; the pane lifecycle contract is documented separately. / 执行端启动元数据，Pane 生命周期契约见工程说明。
 const agents = {
@@ -23,8 +24,28 @@ const agents = {
       if (resumeId) args.push('--resume', psQuote(resumeId));
       if (task.model) args.push('--model', psQuote(task.model));
       if (task.effort) args.push('--effort', psQuote(task.effort));
+      if (task.workerPolicyPath) args.push('--append-system-prompt', `(Get-Content -Raw -Encoding utf8 -LiteralPath ${psQuote(task.workerPolicyPath)})`);
       args.push('--add-dir', psQuote(taskDir(task.id)));
       return args.join(' ');
+    },
+  },
+  zcode: {
+    id: 'zcode', label: 'ZCode Desktop (Start Plan)', displayName: 'zcode', herdrAgent: 'zcode',
+    transport: 'herdr-pane', promptMode: 'file-input', trustPrompt: /(?!) /,
+    capabilities: { resume: true, followup: true, events: true }, replayOnRelaunch: false, resumeInput: ':resume',
+    buildCommand(task, resumeId) {
+      return ['&', psQuote(process.execPath), psQuote(path.join(config().root, 'bin', 'zcode-worker.js')),
+        ...(resumeId ? [psQuote(resumeId)] : [])].join(' ');
+    },
+    readBlocker(task) {
+      const state = readJson(path.join(taskDir(task.id), 'zcode-state.json'), null);
+      return state?.state === 'blocked' ? { type: state.reason, requiresAction: true,
+        originalExecutionMayContinue: state.originalExecutionMayContinue ?? true,
+        message: `ZCode blocked: ${state.reason}` } : null;
+    },
+    readPromptContext(task) {
+      const state = readJson(path.join(taskDir(task.id), 'zcode-state.json'), null);
+      return state?.round === task.round ? state.promptContext : null;
     },
   },
 };

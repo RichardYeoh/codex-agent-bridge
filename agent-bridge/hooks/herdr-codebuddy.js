@@ -4,6 +4,7 @@
 const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
+const { leaseForEvent } = require('../lib/worker-lease');
 
 const states = {
   SessionStart: 'idle',
@@ -31,11 +32,12 @@ async function main() {
   const name = event.hook_event_name || event.event;
   try {
     const logDir = process.env.AGENT_BRIDGE_STATE_DIR || path.join(process.env.LOCALAPPDATA, 'agent-bridge');
+    const lease = leaseForEvent(logDir, process.env.AGENT_BRIDGE_HERDR_SESSION, HERDR_PANE_ID, event.session_id);
     fs.mkdirSync(logDir, { recursive: true });
     fs.appendFileSync(path.join(logDir, 'hook-events.ndjson'), `${JSON.stringify({
       timestamp: new Date().toISOString(), name, source: event.source, paneId: HERDR_PANE_ID,
       sessionId: event.session_id, notificationType: event.notification_type,
-      taskId: process.env.AGENT_BRIDGE_TASK_ID,
+      taskId: lease?.taskId || process.env.AGENT_BRIDGE_TASK_ID,
       herdrSession: process.env.AGENT_BRIDGE_HERDR_SESSION,
     })}\n`);
   } catch {}

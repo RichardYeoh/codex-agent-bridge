@@ -23,10 +23,12 @@
 
 通知由 `lib/notification-control.js` 统一合并及撤回，执行适配器不直接向Codex投递。`lib/codex-client.js` 负责原生队列传输；`lib/blocker.js` 提供CBC终端错误的辅助分类，后续Agent可将协议化错误映射到相同blocked语义，不要求复用终端正则。
 
-## ZCode 的最小接入范围
+## ZCode 的当前实现
 
-ZCode app-server 是 stdio NDJSON 服务，不是现成的交互终端 Agent。若采用现有 Herdr 承载，新增一个薄的 `zcode-worker` 适配程序：管理 app-server 子进程、接收任务文件指针、转换 V4 命令与状态事件、处理 Host 反向请求、上报 Herdr 状态和持久会话ID，并将 Escape 转为 stop。再注册启动描述和安装必需的事件脚本。这样可以复用现有任务编排、通知与验收，不需将 V4 协议复制到业务层。
+当前zcode-worker作为Herdr中的Node交互程序，接收单行任务文件路径，通过Desktop Remote Relay/Host RPC发送V4命令、订阅当前会话并上报自定义zcode身份。Escape转为V4 stop，完成后释放远控连接。直接app-server与独立CLI保留为备选，当前不管理它们的独立认证与Provider。
 
-若未来明确选择直接复用 Desktop Host，须先取得已验证的外部连接与授权机制，再为该传输实现相同语义。当前不实现无事实依据的 Desktop RPC 连接、凭据转移或套餐映射。
+适配器使用官方只读共享登录函数，仅在内存取得Relay认证，固定官方域名，连接配置私有保存。命令日志和sourceCommandId控制收口，普通resume按原会话和命令恢复观察，replayOnRelaunch=false防止Pane重建触发自动重投。新适配器可声明resumeInput、readBlocker及readPromptContext，分别恢复观测、读取结构化阻塞和回报实际提示模式；公共协调器继续管理任务状态与验收。
+
+worker-policy统一规格校验与提示渲染；worker-context维护真实会话的已交付回执；worker-lease解决同一执行进程先后承担不同任务时环境变量仍保留旧taskId的问题。注册名称不是集成完成的证据，新执行端仍须实测所有必要行为。具体ZCode路线与限制见[接入说明](../../docs/ZCode接入与方案选择.md)。
 
 Source server 的远程连接与手机远控是不同入口，不能因为存在同名 V4 命令，就把远端 server 的 `/ws` 接口当成现有桌面的本地监听服务。
