@@ -1,0 +1,36 @@
+{
+  "version": "0.4.0",
+  "agyVersion": "1.4.7",
+  "platform": "Windows native",
+  "execution": "native interactive CLI + project lifecycle Hooks",
+  "testedModel": "gemini-3.8-flash-low",
+  "testedEffort": "low",
+  "checks": {
+    "independentFileAcceptance": true,
+    "sameNativeConversationAfterPaneClose": true,
+    "deltaWithoutRepeatingMemoryWord": true,
+    "independentMemorySha256Check": true,
+    "sameTaskReworkAfterPaneClose": true,
+    "nativeHookPreInvocationAndStop": true,
+    "systemRuleReceiptPresent": true,
+    "directoryTrustBlockedThenConfirmed": true,
+    "externalFileApprovalOnce": true,
+    "fixedVerificationCommandApprovalOnce": true,
+    "approvalsRetainRoundAndConversation": true,
+    "escapeCancellationHerdrIdle": true,
+    "startupRoundZeroNotificationRegression": true
+  },
+  "automation": {
+    "regressions": 83,
+    "legacyArtifactAcceptance": 8
+  },
+  "unverified": [
+    "long unattended operation",
+    "full machine restart",
+    "real account quota depletion",
+    "all permission branches and models",
+    "external background command cancellation",
+    "automatic context compaction detection",
+    "new queue waking an idle Codex thread"
+  ]
+}

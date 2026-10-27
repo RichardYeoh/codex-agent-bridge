@@ -1,4 +1,4 @@
-# 协调器操作说明 0.3.1
+# 协调器操作说明 0.4.0
 
 项目定位、安装、维护与发布见[根目录README](../README.md)。在项目根目录运行npm ci；全部依赖由根package-lock.json锁定。
 
@@ -16,7 +16,7 @@ node $bridge rework <任务ID> --prompt-file <返工要求>
 node $bridge accept <任务ID>
 ```
 
-优先--pane指定Codex主Pane，协调器固定保留其左半屏和完整高度，先填右侧上下两个执行Pane，后续按每标签4格扩展。只有Workspace时要求有唯一Codex锚点。明确隔离才用--new-workspace --isolation-reason。执行显示名cbc或zcode，任务ID独立；已有同类执行者时显示名加短编号。默认CBC，加--agent zcode选择Desktop执行端。
+优先--pane指定Codex主Pane，协调器固定保留其左半屏和完整高度，先填右侧上下两个执行Pane，后续按每标签4格扩展。只有Workspace时要求有唯一Codex锚点。明确隔离才用--new-workspace --isolation-reason。执行显示名cbc、zcode或agy，任务ID独立；已有同类执行者时显示名加短编号。默认CBC，加--agent zcode选择Desktop执行端。
 
 规格写法见[模板](skills/delegate-worker/references/task-brief-template.md)。goal、background、inputs、allowedChanges、requirements、acceptance和deliverables必填，按需补steps、preserve、examples、edgeCases、nonGoals、stopConditions。projectContext保存稳定项目背景。Codex根据上下文连续性选择--worker-key，默认primary；该键不定义固定角色。相关会话默认复用，已关闭Pane也按保存sessionId恢复，核实后使用差量。--new-session明确重开，--full-context明确发送完整背景。正式需求变更时rework同时传--spec-file。
 
@@ -25,6 +25,8 @@ node $bridge accept <任务ID>
 目录信任已获授权时可添加--trust-folder。CBC默认-y；需要保留权限检查时传--no-skip-permissions --permission-mode acceptEdits。可传--model和--effort，不修改全局默认。cwd与--add-dir不是操作系统沙箱。
 
 主控先notifications pending获取当前任务/轮次/key，再ack并独立验收。报告存在仅进入review_pending，不通过时原会话rework，通过后accept。异步派工返回后继续独立工作，或结束本轮等待完成提醒，不反复查询未变化状态。
+
+agy使用原生交互CLI，加--agent agy选择。支持--model、--effort，未指定时继承CLI配置；--no-skip-permissions --permission-mode accept-edits保留原生审批，已授权目录才传--trust-folder。首次派工自动合并项目.agents/hooks.json并生成本机入口脚本，保留其他Hook；这些绑定不应提交到业务仓库。启动预检仅核验conversation_id，不发送模型任务。详见[接入说明](../docs/Antigravity接入与验证.md)。
 
 ## 恢复与通知
 

@@ -16,9 +16,22 @@ test.after(() => {
   fs.rmSync(stateDir, { recursive: true, force: true });
 });
 
-test('registry exposes CBC and the Desktop ZCode worker', () => {
-  assert.deepEqual(listAgents().map(agent => agent.id), ['cbc', 'zcode']);
+test('registry exposes CBC, Desktop ZCode and Antigravity CLI workers', () => {
+  assert.deepEqual(listAgents().map(agent => agent.id), ['cbc', 'zcode', 'agy']);
 });
+
+test('agy launches native interactive CLI with explicit conversation and no replay on relaunch', () => {
+  const descriptor = getAgent('agy');
+  const command = descriptor.buildCommand({ id: 'agy-launch-test', skipPermissions: false, permissionMode: 'acceptEdits', model: 'chosen', effort: 'low' }, 'conversation-example');
+  assert.match(command, /agy\.exe' --conversation 'conversation-example'/);
+  assert.match(command, /--mode 'accept-edits' --model 'chosen' --effort 'low'/);
+  assert.doesNotMatch(command, /--print|stream-json|agy-worker/);
+  assert.throws(() => descriptor.buildCommand({ id: 'agy-no-id' }), /verified conversation/);
+  assert.equal(descriptor.capabilities.resume, true);
+  assert.equal(descriptor.replayOnRelaunch, false);
+  assert.equal(chooseAgentName('agy', [], null), 'agy');
+});
+
 
 test('display names are independent of task IDs and remain unique among live agents', () => {
   assert.equal(chooseAgentName('cbc', [], 'w1:p1'), 'cbc');

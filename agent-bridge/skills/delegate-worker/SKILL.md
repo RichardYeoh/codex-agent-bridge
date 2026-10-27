@@ -1,11 +1,11 @@
 ---
 name: delegate-worker
-description: "Delegate a bounded, verifiable task to CBC or ZCode through the local Herdr agent-bridge, then review, rework in the same session, or accept its delivery. Use for explicit external-agent delegation or substantial separable work when delegation is authorized. Excludes general Herdr pane management, which belongs to the official herdr skill."
+description: "Delegate a bounded, verifiable task to CBC, ZCode or Antigravity CLI (agy) through the local Herdr agent-bridge, then review, rework in the same session, or accept its delivery. Use for authorized external-agent delegation. Excludes general Herdr pane management."
 ---
 
 # Herdr 外部执行任务
 
-Codex保留规划、核心决策和最终验收；CBC、ZCode独立执行明确任务。默认只运行一个外包任务。主控的派工、审查和验收仍消耗Codex配额，执行任务使用各执行端自身账户。
+Codex保留规划、核心决策和最终验收；CBC、ZCode、Antigravity CLI独立执行明确任务。Antigravity对应--agent agy。默认只运行一个外包任务。主控的派工、审查和验收仍消耗Codex配额，执行任务使用各执行端自身账户。
 
 协调器：`{{AGENT_BRIDGE_ROOT}}/bin/agent-bridge.js`。本技能由协调器工程安装，源文件中的路径占位符由安装器绑定到本机检出目录。
 默认状态根：`%LOCALAPPDATA%\agent-bridge`；测试或隔离任务设置 `AGENT_BRIDGE_STATE_DIR`。
@@ -26,7 +26,7 @@ Codex保留规划、核心决策和最终验收；CBC、ZCode独立执行明确�
 
 1. 明确单一目标、完成后的可观察行为及不做事项。对能力较弱的模型，给出实施顺序和每步产物，避免抽象的“优化一下”“按最佳实践实现”。
 2. 写出执行所需的背景、既有实现与参考输入，每个路径说明用途和需要保留的行为；先核对输入确实存在。只传当前任务必要的信息，不复制整段会话。
-3. 限定可修改文件、接口和不变条件。明确已有测试是否可改、边界情况、代表性输入输出及错误处理。未知项不能包装成事实；关键缺口先向主控报告。
+3. 限定可修改文件、接口和不变条件。明确已有测试是否可改、边界情况、代表性输入输出及错误处理；把适用的用户及项目约定写进规格，例如代码注释中英双语，不能假设执行者继承Codex上下文。未知项不能包装成事实；关键缺口先向主控报告。
 4. 逐项给出客观验收命令与预期结果，并写明交付文件、真实证据和停止条件。禁止执行者通过降低期望、隐去失败或自称完成替代验收。
 5. 写入task-spec-v1 JSON：goal、background、inputs（path/purpose）、allowedChanges、requirements、acceptance（command/expected）、deliverables必填；steps、preserve、edgeCases、examples、nonGoals、stopConditions按需填写。projectContext只保存可跨任务复用的稳定项目背景。协调器校验必填项，不替Codex猜测需求。
 
@@ -55,6 +55,8 @@ node $bridge dispatch --session <已核实的会话名> --workspace <项目Works
 
 ZCode使用同一命令加--agent zcode。默认GLM-5.3-Flash、low，复用Desktop登录和Start Plan，连接配置位于状态根zcode-desktop.json，或由--zcode-config指定。先读取[ZCode接入与限制](references/zcode-desktop.md)。不通过浏览器派工，不改安装包，不自动切换模型。默认跳过权限时映射yolo；需保留检查时加--no-skip-permissions --permission-mode edit，出现权限请求后先核实具体命令及已有授权，只能显式单次批准。
 
+Antigravity使用同一命令加--agent agy。先读取[agy执行、权限与恢复](references/agy-cli.md)。使用官方CLI和现有登录，不读取或复制认证值；--model和--effort透传，未指定时继承CLI默认。原生conversation_id是唯一恢复目标，不使用含糊的--continue。CLI会话可跨进程恢复，无需独立后台服务。原生交互界面在Pane中可见；项目级Hook通过官方systemMessage注入稳定规则，同会话同规则版本不重复注入，每轮任务仍给出完整或差量规格。
+
 派工只等待启动和确认任务已开始，不等待任务完成。返回后继续独立工作，或向用户说明后台任务进度并结束当前轮；依靠完成通知继续。不要反复读取未变化的状态和日志。
 
 默认单任务串行。只有用户明确要求并行时才为每个任务传--parallel及独立--worker-key；先划分互不重叠的明确写入文件/目录，公共集成文件由主控处理。工具允许这些明确的并行任务，仍禁止同一上下文同时接收两个未闭合任务。用户举例说明并行不等于要求立即拉起多个Agent。同一ZCode Desktop远控绑定只有一个terminal席位，不能并发占用；CBC可按明确授权并行。
@@ -73,7 +75,7 @@ node $bridge ack <任务ID> --key <通知中的key>
 
 - `review_pending`：报告存在，尚未验收。检查真实改动并运行任务书的验收命令。
 - `delivery_missing`：结束但未交报告。检查一次现场后决定返工。
-- `blocked`：需要输入或权限。读取具体提示，在已有授权内处理；缺少授权时交给用户。
+- `blocked`：需要输入或权限，启动阶段也可能发生。主动读取当前Pane的visible提示，不能等待用户提醒；核对路径与动作，在已有授权内处理，缺少授权时交给用户。对原生CLI可发送明确按键或文本，优先单次批准；不无条件回车或授予永久权限。
 - 网络、限流、配额耗尽或等待超时也可进入 `blocked`。保存会话与轮次，不自动换模型、新建会话或反复重派。默认监听上限30分钟，可用派工参数 `--wait-timeout-ms` 调整；超时不代表原CBC已停止。
 - `failed`：查看错误，确认 worker 是否还在执行，再决定恢复。
 - `submission_unknown`：提交结果不确定，禁止直接重发。`recover` 只对账；无活动证据时人工确认。
@@ -111,4 +113,4 @@ node $bridge cancel <任务ID>
 
 ## 扩展边界
 
-`agent-bridge agents` 查询已注册执行者。目前仅 CBC 已实现；后续 Agent 必须完成启动、会话恢复、状态事件和取消适配后才可投入派工。注册表中的名称不等于接入已经可用。ZCode 调查和适配由工程说明管理，不在技能中提前加入未验证命令。
+`agent-bridge agents` 查询已注册执行者。目前为CBC、ZCode、agy；不同执行端的能力与限制见对应参考文件。后续Agent须验证启动、真实会话恢复、状态事件和取消后再投入派工，注册名称本身不证明可用。

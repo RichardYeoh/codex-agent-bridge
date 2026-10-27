@@ -57,7 +57,8 @@ function readText(session, args) {
 }
 
 function paneText(session, paneId) {
-  return readText(session, ['pane', 'read', paneId, '--source', 'recent-unwrapped', '--lines', '160']);
+  return readText(session, ['pane', 'read', paneId, '--source', 'recent-unwrapped', '--lines', '160'])
+    || readText(session, ['pane', 'read', paneId, '--source', 'visible', '--lines', '60']);
 }
 
 function agentText(session, paneId) {
@@ -116,6 +117,9 @@ async function launchWorker(task, resumeId, { trustFolder = false } = {}) {
   writeWorkerPolicy(task);
   writeLease(task);
   saveTask(task);
+  await getAgent(task.agent).prepareWorker?.(task, resumeId);
+  writeLease(task);
+  saveTask(task);
   api(task.herdrSession, ['pane', 'run', task.paneId, launchCommand(task, resumeId)]);
 
   const deadline = Date.now() + 120000;
@@ -133,6 +137,8 @@ async function launchWorker(task, resumeId, { trustFolder = false } = {}) {
       }
       api(task.herdrSession, ['pane', 'send-keys', task.paneId, 'enter']);
       trustAnswered = true;
+      await sleep(200);
+      continue;
     }
     try {
       const agent = agentInfo(task.herdrSession, task.paneId);
@@ -288,14 +294,23 @@ async function dispatch(options) {
     }
     await submit(task, promptBody);
   } catch (error) {
-    if (task.status !== 'submission_unknown') task.status = error.code === 'AGENT_BRIDGE_BLOCKED' ? 'blocked' : 'failed';
-    task.error = error.message;
-    task.history.push({ round: task.round, status: task.status, timestamp: now(), message: error.message });
-    saveTask(task);
-    event(task, 'dispatch_failed', { message: error.message });
+    await failDispatch(task, error);
     throw error;
   }
   return task;
+}
+
+async function failDispatch(task, error, notifyOptions = {}) {
+  if (task.status !== 'submission_unknown') task.status = error.code === 'AGENT_BRIDGE_BLOCKED' ? 'blocked' : 'failed';
+  task.error = error.message;
+  task.history.push({ round: task.round, status: task.status, timestamp: now(), message: error.message });
+  saveTask(task);
+  event(task, 'dispatch_failed', { message: error.message });
+  // Startup may block before a completion watcher exists. / 启动可能在完成监听器建立之前阻塞。
+  if (task.status === 'blocked') {
+    try { await require('../lib/notify').notifyTask(task, notifyOptions); }
+    catch (notificationError) { event(task, 'startup_notification_failed', { message: notificationError.message }); }
+  }
 }
 
 async function ensureWorkerAlive(task) {
@@ -574,4 +589,4 @@ if (require.main === module) main().catch(error => {
   process.exitCode = 1;
 });
 
-module.exports = { parse, dispatch, submit, recoverOne, accept, ack, main, assertSingleActive };
+module.exports = { parse, dispatch, submit, recoverOne, accept, ack, main, assertSingleActive, failDispatch };

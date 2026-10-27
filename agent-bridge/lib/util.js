@@ -19,6 +19,7 @@ function config() {
     root: ROOT,
     herdr: process.env.HERDR_BIN_PATH || path.join(process.env.LOCALAPPDATA, 'Programs', 'Herdr', 'bin', 'herdr.exe'),
     cbc: process.env.AGENT_BRIDGE_CBC || path.join(process.env.APPDATA, 'npm', 'cbc.cmd'),
+    agy: process.env.AGENT_BRIDGE_AGY || path.join(process.env.LOCALAPPDATA, 'agy', 'bin', 'agy.exe'),
     codexJs: process.env.AGENT_BRIDGE_CODEX_JS || path.join(process.env.APPDATA, 'npm', 'node_modules', '@openai', 'codex', 'bin', 'codex.js'),
     stateDir: process.env.AGENT_BRIDGE_STATE_DIR || path.join(process.env.LOCALAPPDATA, 'agent-bridge'),
     defaultSession: process.env.HERDR_SESSION || 'default',

@@ -12,7 +12,7 @@ process.env.BRIDGE_STUB_STATE = path.join(root, 'herdr.json');
 process.env.BRIDGE_STUB_QUEUE = path.join(root, 'queue.ndjson');
 process.env.AGENT_BRIDGE_CODEX_JS = path.join(__dirname, 'fixtures', 'codex-stub.cjs');
 const { saveTask, loadTask, withLock, writeJsonAtomic } = require('../lib/util');
-const { submit, recoverOne } = require('../bin/agent-bridge');
+const { submit, recoverOne, failDispatch } = require('../bin/agent-bridge');
 const { assertWorker, updateWorkerSession } = require('../lib/worker');
 const { notifyTask, acknowledgeTask } = require('../lib/notify');
 const { memoryQueue } = require('./fixtures/queue-client.cjs');
@@ -20,6 +20,21 @@ const queue = memoryQueue();
 const notifyOptions = { clientFactory: queue.clientFactory };
 
 test.after(() => fs.rmSync(root, { recursive: true, force: true }));
+
+test('startup trust blockers notify at round zero without an execution watcher or task submission', async () => {
+  const value = task('audit-startup-blocked');
+  value.codexThread = 'startup-thread';
+  const startupOptions = { clientFactory: memoryQueue().clientFactory };
+  const error = new Error('Folder trust confirmation required'); error.code = 'AGENT_BRIDGE_BLOCKED';
+  await failDispatch(value, error, startupOptions);
+  const saved = loadTask(value.id);
+  assert.equal(saved.status, 'blocked'); assert.equal(saved.round, 0);
+  assert.equal(saved.notification.status, 'queued'); assert.equal(saved.notification.round, 0);
+  assert.equal(saved.watcherPid, undefined); assert.equal(saved.submission, undefined);
+  assert.match(fs.readFileSync(path.join(root, 'notifications.ndjson'), 'utf8'), /audit-startup-blocked/);
+  await acknowledgeTask(saved, saved.notification.key, startupOptions);
+  saved.status = 'cancelled'; saveTask(saved);
+});
 
 function task(id) {
   return { id, agent: 'cbc', stateDir: root, cwd: root, herdrSession: 'audit-test',

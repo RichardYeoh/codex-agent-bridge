@@ -48,6 +48,29 @@ const agents = {
       return state?.round === task.round ? state.promptContext : null;
     },
   },
+  agy: {
+    id: 'agy', label: 'Antigravity CLI', displayName: 'agy', herdrAgent: 'agy',
+    transport: 'herdr-pane', promptMode: 'pane-input', trustPrompt: /Do you trust the contents of this project\?|Yes, I trust this folder/,
+    capabilities: { resume: true, followup: true, events: true },
+    replayOnRelaunch: false,
+    prepareWorker: (task, resumeId) => require('./agy-hooks').prepareWorker(task, resumeId),
+    buildCommand(task, resumeId) {
+      if (!resumeId && !task.workerSessionId) throw new Error('Agy requires a verified conversation ID before launch');
+      const args = ['&', psQuote(config().agy), '--conversation', psQuote(resumeId || task.workerSessionId)];
+      if (task.skipPermissions) args.push('--dangerously-skip-permissions');
+      else args.push('--mode', psQuote(task.permissionMode === 'acceptEdits' ? 'accept-edits' : task.permissionMode));
+      if (task.model) args.push('--model', psQuote(task.model));
+      if (task.effort) args.push('--effort', psQuote(task.effort));
+      args.push('--add-dir', psQuote(taskDir(task.id)));
+      return args.join(' ');
+    },
+    readBlocker(task) {
+      const state = readJson(path.join(taskDir(task.id), 'agy-state.json'), null);
+      return state?.state === 'blocked' ? { type: state.reason, requiresAction: true,
+        originalExecutionMayContinue: state.originalExecutionMayContinue ?? true,
+        message: `Antigravity blocked: ${state.reason}` } : null;
+    },
+  },
 };
 
 function getAgent(name) {

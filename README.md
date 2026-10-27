@@ -1,8 +1,8 @@
 # Codex Agent Bridge
 
-以Codex为主控，通过Herdr管理外部执行Agent。Codex负责规划、核心开发、派工、独立审查和最终验收；CBC与ZCode执行明确、可验证的子任务，后续按统一契约接入其他Agent。
+以Codex为主控，通过Herdr管理外部执行Agent。Codex负责规划、核心开发、派工、独立审查和最终验收；CBC、ZCode与Antigravity CLI（agy）执行明确、可验证的子任务，后续按统一契约接入其他Agent。
 
-当前版本：0.3.1。CBC要求Node.js 20及以上；ZCode执行端使用Node.js 24及以上、已登录并启用远控的ZCode Desktop。运行环境保持原生Windows、PowerShell与Herdr。公开源码不包含认证配置或本机原始会话。
+当前版本：0.4.0。CBC要求Node.js 20及以上；ZCode执行端使用Node.js 24及以上、已登录并启用远控的ZCode Desktop。运行环境保持原生Windows、PowerShell与Herdr。公开源码不包含认证配置或本机原始会话。
 
 GitHub仓库：[RichardYeoh/codex-agent-bridge](https://github.com/RichardYeoh/codex-agent-bridge)。验证工作流使用Windows运行器，执行自动回归和交付验收。
 
@@ -39,6 +39,8 @@ npm run install:integration
 主标签固定由Codex占左半屏，右侧最多上下两个执行Pane；第3个执行者进入新标签，该页按整页、左右、右侧上下、四格扩展，满4个再加标签。会话复用不新增Pane。只有用户明确要求并行时才传--parallel与不同worker-key，且写入范围不得重叠。[完整规则与验证](docs/上下文复用与面板布局.md)。
 
 ZCode使用Desktop Host的原生Remote Relay/RPC，日常不需要浏览器操作技能，不需要另外提供DeepSeek或Z.ai API key。默认GLM-5.3-Flash、low；繁忙或断网时保留会话，不自动换模型。首次绑定、权限选项、人工接管及技术边界见[ZCode接入说明](docs/ZCode接入与方案选择.md)。
+
+Antigravity使用官方agy原生交互界面，与CBC一样在Herdr Pane中显示对话和审批。按实际conversation_id恢复，首次为项目合并本机Hook绑定，PreInvocation注入稳定系统规则。自然语言可直接要求“把这项工作交给agy，由你验收”；启动、权限、人工接管与验证范围见[Antigravity接入说明](docs/Antigravity接入与验证.md)。
 
 ## 状态、暂停与恢复
 
