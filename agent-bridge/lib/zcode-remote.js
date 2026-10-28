@@ -21,6 +21,7 @@ function readBinding(file) {
 }
 
 function selectedModel(model = DEFAULT_MODEL, effort = 'max') {
+  // GLM-5.3/Flash catalog revision 33 defines low < high < max. / GLM-5.3及Flash在模型目录修订33中定义low、高档high、最高档max。
   if (!['low', 'high', 'max'].includes(effort)) throw new Error('Unsupported ZCode reasoning level');
   if (!/^GLM-[A-Za-z0-9.\-]+$/.test(model)) throw new Error('Expected a Start Plan model ID');
   return { providerId: 'account:zai-start-plan', modelId: model, options: { reasoningLevel: effort } };

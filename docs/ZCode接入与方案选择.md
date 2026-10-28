@@ -60,3 +60,17 @@ Codex编写完整task-spec-v1，使用--agent zcode派工。缺少必要规格�
 `lib/zcode-remote.js`负责连接、RPC、快照及当前命令终态；`bin/zcode-worker.js`负责Herdr承载、命令日志、报告与恢复；`bin/zcode-control.js`负责显式单次接管。业务轮次、通知、验收、任务位置和Skill仍复用公共实现。固定协议子集位于vendor/zcode，源码清单、摘要、许可证与重建方法随目录提供。
 
 接入其他Agent仍按统一适配契约提供启动、状态、追加要求、结果、取消和会话恢复；无需复制ZCode专用协议，也不改Codex的验收权。
+
+## 2026-10-28：最高推理档位的上游核验
+
+已独立核对官方仓库的内置模型目录、本机Desktop 3.16.3.8992随包目录修订33，以及官方推理强度说明。GLM-5.3系列的reasoningLevel.values为low、high、max；GLM-5.3-Flash专用规则只覆盖多模态能力，不覆盖推理档位，因此沿用该三档。官方规则解析按顺序叠加、模型名称不区分大小写，最高档为max，high是次高档。
+
+当前Start Plan采用anthropic-messages。官方GLM-5.3映射将reasoningLevel写入output_config.effort，并启用thinking；桥接器V4层仍应发送options.reasoningLevel=max，而不是把底层API字段直接放入V4配置。
+
+核验源码固定于上游提交0a1fc56d279fd1001f78387bd81aec1c26767411。本机随包zcode-builtin.json的SHA256为B8C82E7A8036E23E7DFA868213018C1333ED8E7707C8C80AA3230246086BBED4；未读取认证内容或改动安装包。本次核验参数定义及映射，不宣称已追加真实模型调用验证。
+
+- [官方内置目录及协议映射](https://github.com/zai-org/ZCode/blob/0a1fc56d279fd1001f78387bd81aec1c26767411/config/provider/zcode-builtin.json)
+- [官方模型规则叠加实现](https://github.com/zai-org/ZCode/blob/0a1fc56d279fd1001f78387bd81aec1c26767411/packages/provider/src/config/model-config.ts)
+- [官方推理强度说明](https://zcode.z.ai/cn/docs/agents)
+
+此前仅核对桥接器已有允许值即修改默认值，缺少独立上游核验。当前补齐上述依据后确认max设置正确，逻辑保持不变；未来更换模型时须重新核对该模型的可选档位，不能通用假定max对所有Provider都有效。
