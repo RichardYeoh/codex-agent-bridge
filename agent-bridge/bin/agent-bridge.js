@@ -287,9 +287,10 @@ async function dispatch(options) {
   saveTask(task);
   try {
     await ensureServer(task.herdrSession);
-    if (!tryReuseContext(task, { fresh: Boolean(options['new-session']) })) {
+    const reused = tryReuseContext(task, { fresh: Boolean(options['new-session']) });
+    if (worker.id === 'zcode' && !options.effort) task.effort = 'max';
+    if (!reused) {
       task.model ||= worker.id === 'zcode' ? 'GLM-5.3-Flash' : null;
-      task.effort ||= worker.id === 'zcode' ? 'low' : null;
       await launchWorker(task, task.resumeContextSessionId || null, { trustFolder: Boolean(options['trust-folder']) });
     }
     await submit(task, promptBody);

@@ -9,7 +9,7 @@ node $bridge dispatch --agent zcode --session <服务名> --workspace <Workspace
   --codex-thread <线程ID> --cwd <业务目录> --spec-file <任务规格JSON>
 ```
 
-默认GLM-5.3-Flash、low。GLM-5.3可显式选择，繁忙时blocked，不自动降级。默认权限跳过对应yolo；--no-skip-permissions --permission-mode edit保留工具批准，可能暂停验收命令。cwd及提示词白名单均不是沙箱。
+默认GLM-5.3-Flash、max。GLM-5.3可显式选择，繁忙时blocked，不自动降级。默认权限跳过对应yolo；--no-skip-permissions --permission-mode edit保留工具批准，可能暂停验收命令。cwd及提示词白名单均不是沙箱。
 
 执行Pane名zcode，实际会话ID保存在workerSessionId。首次按业务目录匹配Desktop项目，不存在时通过Project服务创建项目条目；不改已有用户任务。每次任务完成或阻塞后释放Relay席位，后续重连原会话。手机、网页同时连接可能抢占同一席位；KICKED后保留任务并停止连接，不能循环争抢。
 
@@ -25,3 +25,5 @@ node $bridge cancel <任务ID>
 ```
 
 cancel将Escape转换成V4 stop，并等待无activeWorks；未确认则cancel_pending。模型可能存在自身网络重试，协调器不宣称可以关闭全部内部重试。Desktop退出、登录过期、远控关闭及协议升级均可能阻断连接；先恢复前提，再检查原会话。整机重启和长时间无人值守尚未全面验证。
+
+未显式指定effort的新派工统一采用max，包括复用先前low会话时的下一次派工；会话ID保持复用，V4发送本次模型配置。显式--effort low/high仍可覆盖。已落盘的运行中任务不被批量改写。历史真实端到端测试采用low，max默认映射经程序回归核对，未额外消耗模型额度重跑完整链路。

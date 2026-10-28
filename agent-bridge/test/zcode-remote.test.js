@@ -20,7 +20,7 @@ test('Desktop binding is restricted to the official remote endpoint', () => {
   }
   fs.writeFileSync(file, JSON.stringify({ remoteUrl: 'https://zcode.z.ai/remote/v4?sid=demo&mid=sample' }));
   assert.deepEqual(readBinding(file), { sid: 'demo', mid: 'sample' });
-  assert.deepEqual(selectedModel(), { providerId: 'account:zai-start-plan', modelId: 'GLM-5.3-Flash', options: { reasoningLevel: 'low' } });
+  assert.deepEqual(selectedModel(), { providerId: 'account:zai-start-plan', modelId: 'GLM-5.3-Flash', options: { reasoningLevel: 'max' } });
   assert.throws(() => selectedModel('arbitrary/provider'));
   assert.throws(() => selectedModel(undefined, 'guess'));
 });

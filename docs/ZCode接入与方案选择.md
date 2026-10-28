@@ -42,7 +42,7 @@ Desktop保持登录并开启官方Web远控。私有连接配置内容如下，�
 
 > 使用delegate-worker把这个边界明确的任务交给zcode，使用Flash；先核对已有会话，交付后由你检查改动并运行固定验收。
 
-Codex编写完整task-spec-v1，使用--agent zcode派工。缺少必要规格会在启动前失败。需要重开会话时--new-session；正式要求变更时rework附更新的--spec-file。默认GLM-5.3-Flash/low，不自动切到GLM-5.3或其他模型。GLM-5.3系统繁忙与余额不足是不同问题，均如实保留状态处理。
+Codex编写完整task-spec-v1，使用--agent zcode派工。缺少必要规格会在启动前失败。需要重开会话时--new-session；正式要求变更时rework附更新的--spec-file。默认GLM-5.3-Flash/max，不自动切到GLM-5.3或其他模型。GLM-5.3系统繁忙与余额不足是不同问题，均如实保留状态处理。
 
 与CBC默认-y一致，ZCode默认跳过权限检查映射yolo；--no-skip-permissions --permission-mode edit保留工具批准，Bash测试命令可能暂停。cwd、允许文件列表及强规则提示不是OS沙箱。CBC原生追加系统提示词，ZCode注入V4用户文本，不宣称具有相同的系统指令优先级。
 

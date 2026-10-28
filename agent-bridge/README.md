@@ -61,7 +61,7 @@ queued只表示入队，acknowledged表示主控确认。Codex 0.164.0原生thre
 
 Agent描述在lib/agents.js，位置在lib/location.js，身份与会话在lib/worker.js，规则/规格在lib/worker-policy.js，上下文回执在lib/worker-context.js，Pane任务租约在lib/worker-lease.js。ZCode传输与会话观察在lib/zcode-remote.js，终端适配器在bin/zcode-worker.js，单次权限接管在bin/zcode-control.js。通知与验收继续复用公共实现。安装依赖为ws@8.22.0，另有固定版本的ZCode协议子集与zod置于vendor/zcode，许可证及重建方法随文件提供。
 
-ZCode默认Flash/low，跳过权限时为yolo；需权限检查时--no-skip-permissions --permission-mode edit。Start Plan要求Desktop已登录并开启官方远控，连接JSON默认位于状态根zcode-desktop.json。具体配置和路线比较见[接入说明](../docs/ZCode接入与方案选择.md)。
+ZCode默认Flash/max，跳过权限时为yolo；需权限检查时--no-skip-permissions --permission-mode edit。Start Plan要求Desktop已登录并开启官方远控，连接JSON默认位于状态根zcode-desktop.json。具体配置和路线比较见[接入说明](../docs/ZCode接入与方案选择.md)。
 
 技能更新先改skills/delegate-worker，再从根目录npm run install:skills；只有需要写CBC Hook配置时才install:integration，安装前会备份，不覆盖官方Herdr技能。
 

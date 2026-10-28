@@ -53,7 +53,7 @@ node $bridge dispatch --session <已核实的会话名> --workspace <项目Works
 
 首次目录信任仅在该目录已获用户信任/授权时添加 `--trust-folder`。可用 `--model <CBC模型ID> --effort <强度>` 选择执行模型，不修改全局默认。保留 CBC 权限检查时添加 `--no-skip-permissions --permission-mode acceptEdits`。
 
-ZCode使用同一命令加--agent zcode。默认GLM-5.3-Flash、low，复用Desktop登录和Start Plan，连接配置位于状态根zcode-desktop.json，或由--zcode-config指定。先读取[ZCode接入与限制](references/zcode-desktop.md)。不通过浏览器派工，不改安装包，不自动切换模型。默认跳过权限时映射yolo；需保留检查时加--no-skip-permissions --permission-mode edit，出现权限请求后先核实具体命令及已有授权，只能显式单次批准。
+ZCode使用同一命令加--agent zcode。默认GLM-5.3-Flash、max，复用Desktop登录和Start Plan，连接配置位于状态根zcode-desktop.json，或由--zcode-config指定。先读取[ZCode接入与限制](references/zcode-desktop.md)。不通过浏览器派工，不改安装包，不自动切换模型。默认跳过权限时映射yolo；需保留检查时加--no-skip-permissions --permission-mode edit，出现权限请求后先核实具体命令及已有授权，只能显式单次批准。
 
 Antigravity使用同一命令加--agent agy。先读取[agy执行、权限与恢复](references/agy-cli.md)。使用官方CLI和现有登录，不读取或复制认证值；--model和--effort透传，未指定时继承CLI默认。原生conversation_id是唯一恢复目标，不使用含糊的--continue。CLI会话可跨进程恢复，无需独立后台服务。原生交互界面在Pane中可见；项目级Hook通过官方systemMessage注入稳定规则，同会话同规则版本不重复注入，每轮任务仍给出完整或差量规格。
 

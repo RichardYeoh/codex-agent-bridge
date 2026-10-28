@@ -20,7 +20,7 @@ function readBinding(file) {
   return { sid: url.searchParams.get('sid'), mid: url.searchParams.get('mid') };
 }
 
-function selectedModel(model = DEFAULT_MODEL, effort = 'low') {
+function selectedModel(model = DEFAULT_MODEL, effort = 'max') {
   if (!['low', 'high', 'max'].includes(effort)) throw new Error('Unsupported ZCode reasoning level');
   if (!/^GLM-[A-Za-z0-9.\-]+$/.test(model)) throw new Error('Expected a Start Plan model ID');
   return { providerId: 'account:zai-start-plan', modelId: model, options: { reasoningLevel: effort } };
