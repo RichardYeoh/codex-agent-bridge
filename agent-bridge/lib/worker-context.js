@@ -27,11 +27,13 @@ function loadContext(task) {
   return readJson(path.join(task.stateDir, 'worker-contexts', `${projectKey(task.cwd, task.agent, task.herdrSession)}.json`), null);
 }
 function listContexts(cwd, agent, workerKey) {
+  // Nicknames resolve to the existing persisted identity, never a second context namespace. / 昵称映射到既有持久身份，不另建上下文命名空间。
+  const canonicalAgent = agent ? getAgent(agent).id : null;
   const root = path.join(config().stateDir, 'worker-contexts');
   return (fs.existsSync(root) ? fs.readdirSync(root) : []).filter(name => name.endsWith('.json'))
     .map(name => readJson(path.join(root, name)))
     .filter(item => (!cwd || path.resolve(item.cwd).toLowerCase() === path.resolve(cwd).toLowerCase())
-      && (!agent || item.agent === agent) && (workerKey === undefined || bindingKey(item.workerKey) === bindingKey(workerKey)))
+      && (!canonicalAgent || item.agent === canonicalAgent) && (workerKey === undefined || bindingKey(item.workerKey) === bindingKey(workerKey)))
     .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))
     .map(item => ({ ...item, workerKey: bindingKey(item.workerKey) }))
     .filter((item, index, entries) => entries.findIndex(other => projectKey(other.cwd, other.agent, other.herdrSession, other.workerKey)

@@ -20,6 +20,15 @@ test('registry exposes OpenCode, CBC, Desktop ZCode and Antigravity CLI workers'
   assert.deepEqual(listAgents().map(agent => agent.id), ['opencode', 'cbc', 'zcode', 'agy']);
 });
 
+test('oc nickname preserves OpenCode identity and gives distinct pane names', () => {
+  assert.equal(getAgent('oc'), getAgent('opencode'));
+  assert.equal(getAgent('oc').id, 'opencode');
+  assert.equal(getAgent('oc').herdrAgent, 'opencode');
+  assert.equal(chooseAgentName('oc', [], null), 'oc');
+  assert.equal(chooseAgentName('opencode', [{ name: 'oc', pane_id: 'w1:p8' }], null), 'oc-2');
+  assert.deepEqual(listAgents().find(agent => agent.id === 'opencode').aliases, ['oc']);
+});
+
 test('agy launches native interactive CLI with explicit conversation and no replay on relaunch', () => {
   const descriptor = getAgent('agy');
   const command = descriptor.buildCommand({ id: 'agy-launch-test', skipPermissions: false, permissionMode: 'acceptEdits', model: 'chosen', effort: 'low' }, 'conversation-example');

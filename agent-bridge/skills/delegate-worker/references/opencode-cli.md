@@ -1,5 +1,7 @@
 # OpenCode V2
 
+用户昵称为oc；自然语言“交给oc”和“交给OpenCode”指同一执行端。命令支持--agent oc，原--agent opencode继续有效；sessions查询同样支持两种名称。面板显示oc，多实例为oc-2等。内部agent类型和已保存上下文仍为opencode，不因昵称重建会话。
+
 使用`dispatch --agent opencode`。本实现核验OpenCode 2.2.0，采用官方CLI API和原生TUI，不使用ACP、浏览器或V1接口。默认可执行文件位于APPDATA/npm/node_modules/@opencode/cli/bin/opencode.exe，其他位置用AGENT_BRIDGE_OPENCODE覆盖。沿用现有登录，禁止提取认证材料。
 
 项目、worker-key和上下文选择遵循主Skill。按真实sessionID恢复；Pane关闭不等于后台任务停止。恢复时只观察原执行，不自动重发。任务文本经官方session.prompt进入同一原生会话，TUI显示相同对话；不要在受管理Pane中切换到其他会话。

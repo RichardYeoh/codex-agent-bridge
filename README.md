@@ -42,7 +42,7 @@ ZCode使用Desktop Host的原生Remote Relay/RPC，日常不需要浏览器操�
 
 Antigravity使用官方agy原生交互界面，与CBC一样在Herdr Pane中显示对话和审批。按实际conversation_id恢复，首次为项目合并本机Hook绑定，PreInvocation注入稳定系统规则。自然语言可直接要求“把这项工作交给agy，由你验收”；启动、权限、人工接管与验证范围见[Antigravity接入说明](docs/Antigravity接入与验证.md)。
 
-OpenCode使用V2官方API派工并保留原生TUI，按真实sessionID恢复。默认沿用OpenCode自身模型配置，显式variant须核对模型目录；审批可通过CLI逐项读取和单次批准。见[OpenCode接入说明](docs/OpenCode接入与验证.md)。
+OpenCode昵称oc，可直接说“交给oc”或使用--agent oc；原opencode名称兼容，面板显示oc。OpenCode使用V2官方API派工并保留原生TUI，按真实sessionID恢复。默认沿用OpenCode自身模型配置，显式variant须核对模型目录；审批可通过CLI逐项读取和单次批准。见[OpenCode接入说明](docs/OpenCode接入与验证.md)。
 
 ## 状态、暂停与恢复
 

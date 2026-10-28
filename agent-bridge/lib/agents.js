@@ -6,7 +6,7 @@ const { config, psQuote, taskDir, readJson } = require('./util');
 // Worker launch metadata; the pane lifecycle contract is documented separately. / 执行端启动元数据，Pane 生命周期契约见工程说明。
 const agents = {
   opencode: {
-    id: 'opencode', label: 'OpenCode CLI V2', displayName: 'opencode', herdrAgent: 'opencode',
+    id: 'opencode', aliases: ['oc'], label: 'OpenCode CLI V2', displayName: 'oc', herdrAgent: 'opencode',
     transport: 'herdr-pane', promptMode: 'api', trustPrompt: /(?!) /,
     capabilities: { resume: true, followup: true, events: true }, replayOnRelaunch: false,
     prepareWorker: (task, resumeId) => require('./opencode').prepareWorker(task, resumeId),
@@ -98,7 +98,8 @@ const agents = {
 
 function getAgent(name) {
   const key = name || 'cbc';
-  const agent = Object.hasOwn(agents, key) ? agents[key] : null;
+  const agent = Object.hasOwn(agents, key) ? agents[key]
+    : Object.values(agents).find(entry => entry.aliases?.includes(key));
   if (!agent) {
     throw new Error(`Unsupported agent: ${name}. Registered: ${Object.keys(agents).join(', ')}`);
   }
@@ -106,7 +107,8 @@ function getAgent(name) {
 }
 
 function listAgents() {
-  return Object.values(agents).map(agent => ({ id: agent.id, label: agent.label }));
+  return Object.values(agents).map(agent => ({ id: agent.id, label: agent.label,
+    ...(agent.aliases ? { aliases: [...agent.aliases] } : {}) }));
 }
 
 function chooseAgentName(id, liveAgents, ownPaneId) {
