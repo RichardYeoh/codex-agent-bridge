@@ -13,14 +13,18 @@ Codex保留规划、核心决策和最终验收；CBC、ZCode、Antigravity CLI�
 ## 环境与职责
 
 - 官方 `herdr` skill 负责通用终端、Pane 和 Agent 控制。本技能负责委派状态、轮次、交付与验收，不修改或复制官方 skill。
-- 一个项目复用一个Workspace。第一标签固定为Codex主Pane占左半屏、执行者占右半屏；第2个执行者只拆右半为上下两格，绝不再拆主Pane。第3个执行者进入新标签；该页依次为整页、左右、右侧上下、四格，满4个再开下一标签。复用现存会话不增加Pane。不搬动或拆分无归属的用户Pane。
+- 一个项目复用一个Workspace。第一标签固定为Codex主Pane占左半屏、执行者占右半屏；第2个执行者只拆右半为上下两格，绝不再拆主Pane。第3个执行者进入新标签；该页依次为整页、左右、右侧上下、四格，满4个再开下一标签。复用存活Pane不增加位置，已关闭则按原会话ID重建。不搬动或拆分无归属的用户Pane。
 - 布局锚点是已核实的Codex主Pane，优先传--pane <主PaneID>；只有Workspace时要求其中有唯一可识别Codex，否则先明确主Pane，不能按UI焦点猜测。独立项目、Worktree或明确隔离时才传--new-workspace --isolation-reason。
-- Herdr执行者显示名使用`cbc`、`zcode`等Agent自身名称，有同类存活实例时加简短编号。任务ID与显示名分离；所有任务与会话关联仍以持久状态为准。
+- Herdr注册名保留协调器生成的`cbc`、`oc-2`等唯一名称；Codex把Pane可读标题改为“注册名 · 用途短名”，例如“oc · JPEG仿真验证”。用途由Codex按本轮任务或持续职责判断，不设置固定角色分类，不用改名替换会话身份。
 - 在 Herdr Pane 中按官方技能读取继承的上下文。若命令经 Codex 常驻 app-server 执行，工具子进程可能没有 `HERDR_*`。此时不得伪造环境标识或依赖焦点；只有用户已指定/授权对应 Herdr 环境时，显式指定已核实的 `--session`，通过协调器执行该任务。
 - 通知目标优先使用 `CODEX_THREAD_ID`；实际派工时明确传入 `--codex-thread`。没有可靠目标时先解决绑定，避免产生无人接收的任务。
 - 目标目录和任务范围须已在用户授权内。`cwd`、`--add-dir` 和任务说明不是操作系统沙箱，默认 `-y` 会跳过 CBC 常规权限询问。需要权限隔离的任务应使用已配置的沙箱或保留权限检查。
 
 ## 派工
+
+派工时先确定一个可识别的用途短名。dispatch成功返回后，由Codex使用返回的herdrSession/paneId执行pane rename，标题包含Agent注册名和用途；不要直接改agent注册名，否则会与task.json中的身份核对不一致。若启动阻塞但已创建Pane，读取落盘任务并核对归属后，也可先按执行端短名与用途标注，不为命名重派任务。不要求执行工具支持原生会话重命名。
+
+把用途短名以UTF-8写入该任务状态目录的worker-label.txt（与worker-policy.md同目录），不手工修改task.json或把真实sessionId写入公开文档。复用已有绑定时先读取sessions候选的lastTaskId所对应worker-label.txt，连续工作默认保留用途；缺少标签时根据已登记目标/范围判断。Pane关闭后重新拉起、返工或恢复导致新Pane时，由Codex重新设置可读标题。同一会话用途调整不改变worker-key或sessionId。
 
 派工提示词按以下方法编写。这是Codex的编排职责，不能把一句宽泛目标直接交给执行Agent自行补全。参考[任务规格模板](references/task-brief-template.md)。
 
@@ -89,6 +93,12 @@ node $bridge rework <任务ID> --prompt-file <返工要求>
 node $bridge accept <任务ID>
 ```
 
+accept成功后默认由Codex关闭该执行Pane、结束本次终端运行，再继续主计划。协调器accept本身仍只记账和清理注册名，不自动关闭；不能把调用accept当作退出步骤已经完成。用户明确要求保留窗口时按其要求执行。
+
+关闭前重新读取accepted任务与sessions台账，确认真实workerSessionId、交付和上下文回执已保存；核对当前Herdr服务、Pane、terminal、Agent类型和最新Pane租约仍属于此任务，且不是Codex主Pane、用户窗口或已被后续任务接管的Pane。只在执行已收敛、无待处理审批/后台工作且idle/done时，调用该服务的pane close。运行或身份不确定时保留现场并说明未关闭原因；不为清理窗口取消其他工作。Pane已经关闭则跳过，不创建新Pane来关闭。
+
+“结束会话”指结束本次执行运行和关闭Pane，保留原生会话历史、worker-key、workerSessionId、用途记录、任务状态和交付，供相关任务按原ID重新拉起。不要删除原生会话、退出账号、停止共享后台服务或关闭整个Workspace。ZCode完成后连接已释放时直接关闭桥接Pane，不要求关闭Desktop中的历史会话。
+
 ## 恢复与接管
 
 ```powershell
@@ -101,7 +111,7 @@ node $bridge cancel <任务ID>
 
 `rework`追加新要求；`resume`处理failed/blocked，必要时按已保存的执行会话ID重建Pane；`recover`对账、重启watcher或补发已明确失败的通知。ZCode普通resume重连权威快照、观察原commandId，重建Pane不重发原指令。自动重投任务可能重复产生副作用，恢复前先核对交付和终端。
 
-返工改变正式要求或验收时同时传 `--spec-file <更新后的规格JSON>`；只补充已定位缺陷时使用简洁的--prompt-file差量。任务完结后保留执行会话台账，后续同项目任务优先尝试复用已验收且身份一致的执行者。只有实际绑定相同会话才能按已有上下文精简提示。
+返工改变正式要求或验收时同时传 `--spec-file <更新后的规格JSON>`；只补充已定位缺陷时使用简洁的--prompt-file差量。任务完结后保留执行会话台账，后续相关任务默认按登记ID重新拉起已验收会话，而不是长期保留空闲Pane；若用户要求保留的执行者仍存活，则核对身份后直接复用。只有实际绑定相同会话才能按已有上下文精简提示。
 
 重建执行 Pane 时仍复用原项目 Workspace，不自动新建 Workspace。`resume --force` 会明确重投已保存任务，只能在已检查现场、确认可以重试后使用；普通 `recover` 不因连接错误自动重发任务。
 

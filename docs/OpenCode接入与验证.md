@@ -12,7 +12,7 @@
 
 ## 使用与配置
 
-昵称为`oc`，面板显示oc，多实例为oc-2等；`--agent oc`与`--agent opencode`等价，sessions查询也接受两者。内部持久类型仍为opencode，既有会话与绑定无需迁移。
+昵称为`oc`，注册名为oc，多实例为oc-2等；Codex在派工后把Pane标题设置为“注册名 · 用途”，例如“oc · JPEG仿真验证”。`--agent oc`与`--agent opencode`等价，sessions查询也接受两者。内部持久类型仍为opencode，既有会话与绑定无需迁移。
 
 ```powershell
 node $bridge sessions --cwd <业务目录> --agent opencode
