@@ -190,6 +190,7 @@ async function submit(task, promptBody, { activityTimeoutMs = 20000, startWatche
   writeWorkerPolicy(task);
   preparePromptContext(task, promptBody);
   fs.writeFileSync(task.promptPath, `${deliveryInstructions(task)}\n${promptBody}\n`);
+  await getAgent(task.agent).prepareSubmission?.(task);
   task.status = 'running';
   task.submission = { status: 'preparing', baselineCompletion: before.completion_seq || 0 };
   task.error = null;
@@ -201,7 +202,9 @@ async function submit(task, promptBody, { activityTimeoutMs = 20000, startWatche
   task.submission.status = 'sending';
   saveTask(task);
   try {
-    if (['pane-input', 'file-input'].includes(getAgent(task.agent).promptMode)) {
+    if (getAgent(task.agent).submitWorker) {
+      await getAgent(task.agent).submitWorker(task, pointer);
+    } else if (['pane-input', 'file-input'].includes(getAgent(task.agent).promptMode)) {
       // CBC is hook-recognized, not a native Herdr agent kind. / CBC 由 hook 识别，尚非 Herdr 原生 Agent 类型。
       api(task.herdrSession, ['pane', 'send-text', task.paneId,
         getAgent(task.agent).promptMode === 'file-input' ? task.promptPath : pointer]);
@@ -349,7 +352,8 @@ async function cancel(options) {
   saveTask(task);
   try {
     assertWorker(task, agentInfo(task.herdrSession, task.paneId));
-    api(task.herdrSession, ['pane', 'send-keys', task.paneId, 'esc']);
+    if (getAgent(task.agent).cancelWorker) await getAgent(task.agent).cancelWorker(task);
+    else api(task.herdrSession, ['pane', 'send-keys', task.paneId, 'esc']);
     await waitForAgent(task, ['idle', 'done'], 10000);
     task.status = 'cancelled';
   } catch (error) {
@@ -405,6 +409,8 @@ async function resume(options) {
   task.status = 'running';
   task.error = null;
   task.history.push({ round: task.round, status: 'resumed', timestamp: now(), relaunched });
+  // Refresh protocol state before waiting; a just-answered dialog may still look blocked. / 等待前刷新协议状态，刚答复的对话框可能仍显示阻塞。
+  if (!relaunched) await getAgent(task.agent).refreshWorker?.(task);
   delete task.blocker;
   saveTask(task);
   if ((relaunched && getAgent(task.agent).replayOnRelaunch !== false) || task.round === 0) {

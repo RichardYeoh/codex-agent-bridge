@@ -36,6 +36,8 @@ Codex是唯一主控，负责规划、核心决策、派工、审查、验收与
 
 ## 安装与验证
 
+OpenCode V2通过原生TUI与官方CLI API协作，真实sessionID与目录必须匹配；会话规则采用持久指令键，模型variant查目录再设置。不使用V1协议或复制认证材料，不改业务项目配置。API提交使用稳定准入ID，观察器状态核对不占模型轮次；关闭Pane不能认定后台执行已停。维护入口为lib/opencode.js、bin/opencode-worker.js及docs/OpenCode接入与验证.md。
+
 ```powershell
 npm ci
 npm test

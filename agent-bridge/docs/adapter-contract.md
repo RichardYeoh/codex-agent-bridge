@@ -40,3 +40,9 @@ Source server 的远程连接与手机远控是不同入口，不能因为存在
 agy通过原生交互CLI运行，与CBC一样保留可见对话、原生审批及人工接管。可选prepareWorker(task,resumeId)在创建位置后、运行CLI前配置项目级Hook，并用官方stream-json初始化核验实际conversation_id；此预检不发送模型任务。其他适配器无需实现该回调。
 
 buildCommand以已核验ID启动原生agy --conversation，普通任务通过Pane发送规格文件指针。Hook记录真实session、任务、轮次与Pane，PreInvocation注入稳定系统规则，Stop核对fullyIdle；通知和验收仍由公共模块处理。恢复不使用--continue，不因连接错误自动重发。replayOnRelaunch=false保留普通恢复的观察语义。详见[接入与验证](../../docs/Antigravity接入与验证.md)。
+
+## OpenCode V2的当前实现
+
+opencode-worker在Pane内启动原生TUI，同进程观察器经官方CLI API核对会话、active、待审批和表单，仅变化时上报Herdr身份与状态。prepareWorker创建或核验真实sessionID，恢复活跃会话时不修改或重放原执行。验收/取消后不继续API轮询。
+
+可选回调保留公共编排：prepareSubmission在提交前更新会话指令及显式模型/权限；submitWorker经官方API提交稳定准入ID和任务指针；cancelWorker请求协议中断并核验；refreshWorker在恢复监听前刷新协议状态，避免旧blocked误收口。未实现回调的旧适配器继续使用原来的终端输入和Escape。会话指令使用experimental持久键，需随上游版本复验；其强度与具体权限边界见[接入说明](../../docs/OpenCode接入与验证.md)。

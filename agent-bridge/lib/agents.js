@@ -5,6 +5,29 @@ const { config, psQuote, taskDir, readJson } = require('./util');
 
 // Worker launch metadata; the pane lifecycle contract is documented separately. / 执行端启动元数据，Pane 生命周期契约见工程说明。
 const agents = {
+  opencode: {
+    id: 'opencode', label: 'OpenCode CLI V2', displayName: 'opencode', herdrAgent: 'opencode',
+    transport: 'herdr-pane', promptMode: 'api', trustPrompt: /(?!) /,
+    capabilities: { resume: true, followup: true, events: true }, replayOnRelaunch: false,
+    prepareWorker: (task, resumeId) => require('./opencode').prepareWorker(task, resumeId),
+    prepareSubmission: task => require('./opencode').configure(task),
+    submitWorker: (task, text) => require('./opencode').submitWorker(task, text),
+    refreshWorker: task => { const worker = require('./opencode'); worker.publish(task, worker.snapshot(task)); },
+    cancelWorker: task => require('./opencode').interrupt(task),
+    buildCommand(task, resumeId) {
+      const id = resumeId || task.workerSessionId;
+      if (!id) throw new Error('OpenCode requires a verified session ID');
+      // Herdr's server may not inherit the coordinator's executable override. / Herdr服务可能未继承协调器的执行文件覆盖配置。
+      return [`$env:AGENT_BRIDGE_OPENCODE=${psQuote(config().opencode)};`, '&', psQuote(process.execPath),
+        psQuote(path.join(config().root, 'bin', 'opencode-worker.js')), psQuote(id)].join(' ');
+    },
+    readBlocker(task) {
+      const state = readJson(path.join(taskDir(task.id), 'opencode-state.json'), null);
+      return state?.state === 'blocked' && state.sessionId === task.workerSessionId && state.round === task.round
+        ? { type: state.reason, requiresAction: true, originalExecutionMayContinue: state.originalExecutionMayContinue ?? true,
+          message: `OpenCode blocked: ${state.reason}` } : null;
+    },
+  },
   cbc: {
     id: 'cbc',
     label: 'CodeBuddy CLI',

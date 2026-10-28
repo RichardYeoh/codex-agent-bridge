@@ -16,8 +16,8 @@ test.after(() => {
   fs.rmSync(stateDir, { recursive: true, force: true });
 });
 
-test('registry exposes CBC, Desktop ZCode and Antigravity CLI workers', () => {
-  assert.deepEqual(listAgents().map(agent => agent.id), ['cbc', 'zcode', 'agy']);
+test('registry exposes OpenCode, CBC, Desktop ZCode and Antigravity CLI workers', () => {
+  assert.deepEqual(listAgents().map(agent => agent.id), ['opencode', 'cbc', 'zcode', 'agy']);
 });
 
 test('agy launches native interactive CLI with explicit conversation and no replay on relaunch', () => {

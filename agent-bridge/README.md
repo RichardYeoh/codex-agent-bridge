@@ -1,4 +1,4 @@
-# 协调器操作说明 0.4.0
+# 协调器操作说明 0.5.0
 
 项目定位、安装、维护与发布见[根目录README](../README.md)。在项目根目录运行npm ci；全部依赖由根package-lock.json锁定。
 
@@ -16,7 +16,7 @@ node $bridge rework <任务ID> --prompt-file <返工要求>
 node $bridge accept <任务ID>
 ```
 
-优先--pane指定Codex主Pane，协调器固定保留其左半屏和完整高度，先填右侧上下两个执行Pane，后续按每标签4格扩展。只有Workspace时要求有唯一Codex锚点。明确隔离才用--new-workspace --isolation-reason。执行显示名cbc、zcode或agy，任务ID独立；已有同类执行者时显示名加短编号。默认CBC，加--agent zcode选择Desktop执行端。
+优先--pane指定Codex主Pane，协调器固定保留其左半屏和完整高度，先填右侧上下两个执行Pane，后续按每标签4格扩展。只有Workspace时要求有唯一Codex锚点。明确隔离才用--new-workspace --isolation-reason。执行显示名cbc、zcode、agy或opencode，任务ID独立；已有同类执行者时显示名加短编号。默认CBC，加--agent zcode选择Desktop执行端。
 
 规格写法见[模板](skills/delegate-worker/references/task-brief-template.md)。goal、background、inputs、allowedChanges、requirements、acceptance和deliverables必填，按需补steps、preserve、examples、edgeCases、nonGoals、stopConditions。projectContext保存稳定项目背景。Codex根据上下文连续性选择--worker-key，默认primary；该键不定义固定角色。相关会话默认复用，已关闭Pane也按保存sessionId恢复，核实后使用差量。--new-session明确重开，--full-context明确发送完整背景。正式需求变更时rework同时传--spec-file。
 

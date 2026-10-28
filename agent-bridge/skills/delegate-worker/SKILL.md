@@ -1,6 +1,6 @@
 ---
 name: delegate-worker
-description: "Delegate a bounded, verifiable task to CBC, ZCode or Antigravity CLI (agy) through the local Herdr agent-bridge, then review, rework in the same session, or accept its delivery. Use for authorized external-agent delegation. Excludes general Herdr pane management."
+description: "Delegate a bounded, verifiable task to CBC, ZCode, Antigravity CLI (agy) or OpenCode through the local Herdr agent-bridge, then review, rework in the same session, or accept its delivery. Use for authorized external-agent delegation. Excludes general Herdr pane management."
 ---
 
 # Herdr 外部执行任务
@@ -111,6 +111,8 @@ node $bridge cancel <任务ID>
 
 人工接管时只操作 task.json 中记录的 Herdr 会话和 Pane，并检查当前占用者。不要在协调器仍判定 `running` 时另发相同任务。需要停止时执行 `cancel` 并确认状态。
 
+OpenCode使用同一派工命令加--agent opencode，先读[OpenCode V2执行与审批](references/opencode-cli.md)。保留原生TUI，通过官方CLI API提交和核对真实会话；稳定规则用持久会话指令注入。模型继承原生配置，effort按模型variant目录验证。审批优先官方API单次批准，恢复不重放原任务。
+
 ## 扩展边界
 
-`agent-bridge agents` 查询已注册执行者。目前为CBC、ZCode、agy；不同执行端的能力与限制见对应参考文件。后续Agent须验证启动、真实会话恢复、状态事件和取消后再投入派工，注册名称本身不证明可用。
+`agent-bridge agents` 查询已注册执行者。目前为CBC、ZCode、agy、opencode；不同执行端的能力与限制见对应参考文件。后续Agent须验证启动、真实会话恢复、状态事件和取消后再投入派工，注册名称本身不证明可用。
