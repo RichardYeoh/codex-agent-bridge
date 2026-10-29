@@ -46,6 +46,8 @@ Antigravity使用官方agy原生交互界面，与CBC一样在Herdr Pane中显�
 
 OpenCode昵称oc，可直接说“交给oc”或使用--agent oc；原opencode名称兼容，面板显示oc。OpenCode使用V2官方API派工并保留原生TUI，按真实sessionID恢复。默认沿用OpenCode自身模型配置，显式variant须核对模型目录；审批可通过CLI逐项读取和单次批准。见[OpenCode接入说明](docs/OpenCode接入与验证.md)。
 
+oc外包交付明显低质，或同一任务连续两次交付未达要求时，由Codex在原会话切换为GLM-5.3完整版并继续返工；全局默认保留。该质量升级规则由Codex验收触发，网络、配额和审批问题不计入质量失败。
+
 ## 状态、暂停与恢复
 
 默认任务状态在本机的 `%LOCALAPPDATA%/agent-bridge`，也可通过AGENT_BRIDGE_STATE_DIR指定。未完成任务必须保留原状态根和执行Agent原生会话数据。

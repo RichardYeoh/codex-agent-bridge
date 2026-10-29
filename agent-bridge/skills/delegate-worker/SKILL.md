@@ -121,7 +121,7 @@ node $bridge cancel <任务ID>
 
 人工接管时只操作 task.json 中记录的 Herdr 会话和 Pane，并检查当前占用者。不要在协调器仍判定 `running` 时另发相同任务。需要停止时执行 `cancel` 并确认状态。
 
-OpenCode昵称oc，面板同名；使用同一派工命令加--agent oc，原--agent opencode兼容，先读[OpenCode V2执行与审批](references/opencode-cli.md)。保留原生TUI，通过官方CLI API提交和核对真实会话；稳定规则用持久会话指令注入。模型继承原生配置，effort按模型variant目录验证。审批优先官方API单次批准，恢复不重放原任务。
+OpenCode昵称oc，面板同名；使用同一派工命令加--agent oc，原--agent opencode兼容，先读[OpenCode V2执行、审批与质量升级](references/opencode-cli.md)。保留原生TUI，通过官方CLI API提交和核对真实会话；稳定规则用持久会话指令注入。模型继承原生配置，effort按模型variant目录验证。oc交付明显低质或同一任务连续两次交付验收未通过时，由Codex按参考规则在原会话升级为GLM-5.3，再给出具体返工要求；网络、配额和审批问题不计为质量失败。审批优先官方API单次批准，恢复不重放原任务。
 
 ## 扩展边界
 

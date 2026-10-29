@@ -26,6 +26,8 @@ node $bridge accept <任务ID>
 
 主控先notifications pending获取当前任务/轮次/key，再ack并独立验收。报告存在仅进入review_pending，不通过时原会话rework，通过后accept。异步派工返回后继续独立工作，或结束本轮等待完成提醒，不反复查询未变化状态。
 
+oc支持rework --model <provider/model>，可同时指定目标模型支持的--effort；模型变更在原workerSessionId执行并保存请求历史，不新建会话，不改全局默认。未指定effort时清除旧模型的variant绑定。其他执行端的rework暂不支持这些参数，须使用其原生恢复流程。质量明显偏低或同一任务连续两次交付验收失败时，Codex按delegate-worker的oc规则升级到GLM-5.3完整版；网络/额度阻塞不计为质量失败。
+
 Codex派工后把Pane标题设置为“注册名 · 用途”，用途短名写入该任务状态目录worker-label.txt；恢复出新Pane时重新应用，不在协调器之外改Agent注册名。验收后由Codex确认会话登记、Pane归属及后台执行已收敛，再关闭本任务执行Pane。accept命令本身不自动关闭；会话历史与ID保留，相关任务以后按原ID重新拉起。详细流程见delegate-worker和[上下文说明](../docs/上下文复用与面板布局.md)。
 
 agy使用原生交互CLI，加--agent agy选择。支持--model、--effort，未指定时继承CLI配置；--no-skip-permissions --permission-mode accept-edits保留原生审批，已授权目录才传--trust-folder。首次派工自动合并项目.agents/hooks.json并生成本机入口脚本，保留其他Hook；这些绑定不应提交到业务仓库。启动预检仅核验conversation_id，不发送模型任务。详见[接入说明](../docs/Antigravity接入与验证.md)。

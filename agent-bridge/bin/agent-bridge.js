@@ -328,12 +328,33 @@ async function ensureWorkerAlive(task) {
   await launchWorker(task, task.workerSessionId, { trustFolder: true });
 }
 
+function applyReworkModel(task, options) {
+  const model = Object.hasOwn(options, 'model');
+  const effort = Object.hasOwn(options, 'effort');
+  if (!model && !effort) return;
+  if (getAgent(task.agent).id !== 'opencode') throw new Error('Rework --model/--effort currently supports only oc; other agents require their native recovery flow');
+  if (model) required(typeof options.model === 'string' && options.model.trim(), 'model');
+  if (effort) required(typeof options.effort === 'string' && options.effort.trim(), 'effort');
+  if (model) {
+    task.model = options.model.trim();
+    // Do not carry the old model's variant into a different model implicitly. / 不把旧模型的variant隐式带入新模型。
+    if (!effort) task.effort = null;
+  }
+  if (effort) task.effort = options.effort.trim();
+}
+
 async function rework(options) {
   const task = loadTask(required(options._[0], 'task id'));
   if (!['review_pending', 'delivery_missing', 'failed'].includes(task.status)) {
     throw new Error(`Rework requires review_pending/delivery_missing/failed; current: ${task.status}`);
   }
   if (task.watcherPid && processAlive(task.watcherPid)) throw new Error('A watcher is still active for this task');
+  applyReworkModel(task, options);
+  if (Object.hasOwn(options, 'model') || Object.hasOwn(options, 'effort')) {
+    // Persist the requested model before native calls, so failures cannot restore an old pin silently. / 原生调用前保存目标模型，失败后不静默恢复旧模型绑定。
+    task.history.push({ round: task.round, status: 'model_change_requested', model: task.model, effort: task.effort, timestamp: now() });
+    saveTask(task);
+  }
   await ensureServer(task.herdrSession);
   await ensureWorkerAlive(task);
   task.forceFullContext = Boolean(options['full-context']);
@@ -596,4 +617,4 @@ if (require.main === module) main().catch(error => {
   process.exitCode = 1;
 });
 
-module.exports = { parse, dispatch, submit, recoverOne, accept, ack, main, assertSingleActive, failDispatch };
+module.exports = { parse, dispatch, submit, recoverOne, accept, ack, main, assertSingleActive, failDispatch, applyReworkModel };

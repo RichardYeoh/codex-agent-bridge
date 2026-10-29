@@ -37,6 +37,14 @@ node $bridge resume <任务ID>
 
 ## 状态与恢复
 
+用户预授权的质量升级由Codex验收时判断：oc明显低质，或同一任务连续两次真实交付未达正式要求时，下一轮在同一session切换到GLM-5.3完整版。每轮审查证据存任务目录round-NNN-review.md；网络、额度、繁忙、审批及未确认提交不计为质量失败。当前核验默认为magpie下的DeepSeek V4.1 Flash，升级目标为同Provider的magpie/raccoon/sn-glm-5-3，执行时重新核对模型目录。该规则不修改OpenCode全局默认，不影响CBC、agy或ZCode。
+
+```powershell
+node $bridge rework <任务ID> --model <已核实的Provider/GLM-5.3模型ID> --prompt-file <返工要求>
+```
+
+rework的模型参数当前只支持oc，先持久保存目标模型，再通过prepareSubmission按原会话切换，不另建空白会话。未指定新effort时清除旧模型variant绑定；显式effort必须由目标模型支持。后续同任务返工保持升级后的模型。既已使用GLM-5.3时不反复切换或无限重派，具体执行和例外见[Skill参考](../agent-bridge/skills/delegate-worker/references/opencode-cli.md)。
+
 状态来自真实会话、active集合、待审批请求和表单。失败映射为blocked/execution_failed，API不可用映射为blocked/api_unavailable，不凭窗口空闲宣布成功。窗口与API断开时原任务可能仍执行，保留原会话、轮次和现场，不自动换模型或重发。
 
 观察器以程序核对快照，活跃时约1秒间隔、其他未闭合状态约3秒；每次还包含CLI/API耗时。状态未变化不重复上报，验收或取消后仅检查本地租约，不继续API轮询。此方法不产生模型轮次，但存在本地CLI进程和API开销。当前CLI的api事件订阅未得到可用流式输出，因此未将该入口当作可靠事件源；后续有必要时可改为官方流式客户端。

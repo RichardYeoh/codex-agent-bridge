@@ -7,6 +7,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { configure, prepareWorker, snapshot, interrupt, submitWorker, modelRef, idleBelongsToRound, publish } = require('../lib/opencode');
 const { getAgent } = require('../lib/agents');
+const { applyReworkModel } = require('../bin/agent-bridge');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bridge-opencode-'));
 process.env.AGENT_BRIDGE_STATE_DIR = root;
 test.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -122,4 +123,29 @@ test('OpenCode failed Herdr reports are retried instead of being cached as deliv
   let sent = false;
   publish(f.task, { state: 'blocked' }, () => { sent = true; });
   assert.equal(sent, true);
+});
+
+test('oc quality rework switches the pinned model in the original session without carrying an incompatible variant', () => {
+  const f = fixture();
+  f.task.model = 'old/flash'; f.task.effort = 'legacy-variant';
+  applyReworkModel(f.task, { model: 'p/m' });
+  assert.equal(f.task.effort, null);
+  assert.equal(f.task.workerSessionId, 'ses_original');
+  configure(f.task, f.request);
+  const switched = f.calls.find(c => c.op === 'session.switchModel');
+  assert.deepEqual(switched.params, { sessionID: 'ses_original' });
+  assert.deepEqual(switched.body.model, { providerID: 'p', id: 'm' });
+  assert.equal(f.calls.some(c => /create|prompt|interrupt/.test(c.op)), false);
+  applyReworkModel(f.task, {}); assert.equal(f.task.model, 'p/m');
+  applyReworkModel(f.task, { effort: 'max' }); assert.equal(f.task.model, 'p/m');
+  assert.equal(f.task.effort, 'max');
+});
+
+test('rework rejects unsupported agents and incomplete model options without changing state', () => {
+  const f = fixture(); f.task.model = 'old/flash';
+  assert.throws(() => applyReworkModel(f.task, { model: 'p/m', effort: '' }), /Missing --effort/);
+  assert.equal(f.task.model, 'old/flash');
+  for (const agent of ['cbc', 'agy', 'zcode']) {
+    assert.throws(() => applyReworkModel({ agent }, { model: 'p/m' }), /only oc/);
+  }
 });
