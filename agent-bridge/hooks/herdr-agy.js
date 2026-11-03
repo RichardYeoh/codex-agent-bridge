@@ -30,6 +30,7 @@ async function main() {
       response.injectSteps = [{ systemMessage: { systemMessage: policy, metadata: { source: 'codex-agent-bridge' } } }];
       writeJsonAtomic(marker, { sessionId, timestamp: now(), policySha256: task.workerPolicySha256 });
     }
+    await require('../lib/messages').injectAgy(task, input, response);
   }
   if (name === 'PreToolUse' && (input.toolCall?.name !== 'notify_user' || input.toolCall?.args?.BlockedOnUser === true)) {
     state = 'blocked'; reason = 'user_input_required';
@@ -40,7 +41,9 @@ async function main() {
     else { state = 'blocked'; reason = 'background_work_unconfirmed'; }
   }
   const receipt = { timestamp: now(), name, source: 'agy-native-hook', sessionId, taskId: task.id,
-    herdrSession: task.herdrSession, paneId: task.paneId, round: task.round,
+    herdrSession: task.herdrSession, paneId: task.paneId, terminalId: task.terminalId, round: task.round,
+    messageHookVersion: 1, transcriptPath: input.transcriptPath,
+    invocationNum: input.invocationNum, initialNumSteps: input.initialNumSteps,
     ...(name === 'Stop' ? { fullyIdle: input.fullyIdle, terminationReason: input.terminationReason } : {}),
     ...(reason ? { reason, originalExecutionMayContinue: input.fullyIdle !== true } : {}) };
   fs.appendFileSync(path.join(task.stateDir, 'hook-events.ndjson'), JSON.stringify(receipt) + '\n');

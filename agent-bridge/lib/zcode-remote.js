@@ -6,6 +6,7 @@ const crypto = require('node:crypto');
 const { EventEmitter } = require('node:events');
 const WebSocket = require('ws');
 const sdk = require('../vendor/zcode/remote-sdk.cjs');
+const { acquire } = require('./zcode-relay-lease');
 
 const ORIGIN = 'https://zcode.z.ai';
 const DEFAULT_MODEL = 'GLM-5.3-Flash';
@@ -39,6 +40,14 @@ class ZCodeRemote extends EventEmitter {
   }
 
   async connect() {
+    if (this.closed || this.lease) throw new Error('ZCode remote already used; create a fresh connection object');
+    // Hold the local seat before authentication; diagnostic tools must not kick an observer. / 认证前占有本地席位，诊断工具不得踢出观察器。
+    if (this.binding.sid && this.binding.mid) this.lease = acquire(this.binding);
+    try { return await this.connectRelay(); }
+    catch (error) { this.close(); throw error; }
+  }
+
+  async connectRelay() {
     const jwt = this.credential('zcodejwttoken');
     if (!jwt) throw new Error('ZCode Desktop login unavailable; sign in in Desktop');
     let response;
@@ -65,7 +74,10 @@ class ZCodeRemote extends EventEmitter {
       });
       this.ws.on('message', raw => this.receive(raw));
       this.ws.on('error', () => this.fail('ZCode relay connection failed'));
-      this.ws.on('close', () => { if (!this.closed) this.fail('ZCode relay disconnected'); });
+      this.ws.on('close', () => {
+        this.releaseLease();
+        if (!this.closed) this.fail('ZCode relay disconnected');
+      });
     });
     this.bootstrap = (await this.request('bootstrap-request')).result;
     return this.bootstrap;
@@ -137,13 +149,15 @@ class ZCodeRemote extends EventEmitter {
   }
 
   async call(channel, method, ...args) {
+    if (this.closed) throw this.fault || new Error('ZCode relay is closed');
     let timer;
     try {
       return await Promise.race([
         this.client.getChannel(channel).call(method, args),
         new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`ZCode ${method} acknowledgement uncertain`)), this.timeoutMs); }),
       ]);
-    } finally { clearTimeout(timer); }
+    } catch (error) { throw this.fault || error; }
+    finally { clearTimeout(timer); }
   }
 
   listen(channel, name, args, listener) { return this.client.getChannel(channel).listen(name, args)(listener); }
@@ -180,6 +194,7 @@ class ZCodeRemote extends EventEmitter {
   fail(message) {
     if (this.closed) return;
     const error = new Error(message);
+    this.fault = error;
     this.pairing?.reject(error);
     this.close();
     this.emit('fault', error);
@@ -192,14 +207,20 @@ class ZCodeRemote extends EventEmitter {
     for (const pending of this.pending.values()) { clearTimeout(pending.timer); pending.reject(new Error('ZCode connection closed')); }
     this.pending.clear(); this.client?.dispose(); this.degraded?.dispose(); this.relay?.dispose();
     this.ws?.close();
+    if (!this.ws || this.ws.readyState === WebSocket.CLOSED) this.releaseLease();
     const socket = this.ws;
     setTimeout(() => socket?.terminate(), 500).unref();
+  }
+
+  releaseLease() {
+    this.lease?.release(); this.lease = null;
   }
 }
 
 class Conversation extends EventEmitter {
   constructor(remote, sessionId) {
     super(); Object.assign(this, { remote, sessionId });
+    this.on('fault', error => { this.fault = error; });
     this.assembler = new sdk.TopicWireFrameAssembler(sdk.conversationTopicFrameSchema);
     this.listener = remote.listen('zcode-agent', 'onDynamicConversationFrame', remote.target, wire => {
       if (wire.topic !== `conversation/${sessionId}` || (this.subscriptionId && wire.subscriptionId !== this.subscriptionId)) return;
@@ -217,7 +238,7 @@ class Conversation extends EventEmitter {
           }
           this.emit('snapshot', this.snapshot);
         }
-      } catch { this.emit('fault', new Error('ZCode conversation validation failed')); }
+      } catch (error) { this.emit('fault', new Error('ZCode conversation validation failed', { cause: error })); }
     });
   }
 
@@ -230,12 +251,17 @@ class Conversation extends EventEmitter {
   }
 
   wait(predicate, timeoutMs = 120000) {
+    if (this.fault) return Promise.reject(this.fault);
+    if (this.remote.closed) return Promise.reject(this.remote.fault || new Error('ZCode relay disconnected'));
     if (this.snapshot && predicate(this.snapshot)) return Promise.resolve(this.snapshot);
     return new Promise((resolve, reject) => {
       const done = (error, snapshot) => { clearTimeout(timer); this.off('snapshot', onSnapshot); this.off('fault', onFault); this.remote.off('fault', onFault); error ? reject(error) : resolve(snapshot); };
       const onSnapshot = snapshot => { if (predicate(snapshot)) done(null, snapshot); };
       const onFault = error => done(error);
-      const timer = setTimeout(() => done(new Error('ZCode execution observation timeout; execution may continue')), timeoutMs);
+      const timer = setTimeout(() => {
+        const error = new Error('ZCode observation window elapsed; execution may continue');
+        error.code = 'ZCODE_OBSERVATION_WINDOW'; done(error);
+      }, timeoutMs);
       this.on('snapshot', onSnapshot); this.on('fault', onFault); this.remote.on('fault', onFault);
     });
   }
@@ -250,6 +276,10 @@ class Conversation extends EventEmitter {
 
 function turnState(snapshot, commandId) {
   const header = snapshot.rows.window.find(row => row.kind === 'turnHeader' && row.sourceCommandId === commandId);
+  // Active work survives a truncated tail window. / 尾窗截断后，原命令的活动记录仍可证明正在执行。
+  if (snapshot.control.activeWorks?.some(work => work.sourceCommandId === commandId)) {
+    return { seen: true, terminal: false, state: 'running', ...(header ? { header } : {}) };
+  }
   if (!header) return { seen: false, terminal: false };
   return { seen: true, terminal: ['completedSuccess', 'completedInterrupted', 'failed'].includes(header.state), state: header.state,
     header, error: snapshot.control.lastError };

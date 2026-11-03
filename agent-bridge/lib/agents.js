@@ -10,10 +10,11 @@ const agents = {
     transport: 'herdr-pane', promptMode: 'api', trustPrompt: /(?!) /,
     capabilities: { resume: true, followup: true, events: true }, replayOnRelaunch: false,
     prepareWorker: (task, resumeId) => require('./opencode').prepareWorker(task, resumeId),
-    prepareSubmission: task => require('./opencode').configure(task),
+    prepareSubmission: task => require('./opencode').prepareSubmission(task),
     submitWorker: (task, text) => require('./opencode').submitWorker(task, text),
-    refreshWorker: task => { const worker = require('./opencode'); worker.publish(task, worker.snapshot(task)); },
+    refreshWorker: (task, options) => require('./opencode').refreshWorker(task, options),
     cancelWorker: task => require('./opencode').interrupt(task),
+    cancellationState: task => require('./opencode').cancellationState(task),
     buildCommand(task, resumeId) {
       const id = resumeId || task.workerSessionId;
       if (!id) throw new Error('OpenCode requires a verified session ID');
@@ -56,6 +57,8 @@ const agents = {
     id: 'zcode', label: 'ZCode Desktop (Start Plan)', displayName: 'zcode', herdrAgent: 'zcode',
     transport: 'herdr-pane', promptMode: 'file-input', trustPrompt: /(?!) /,
     capabilities: { resume: true, followup: true, events: true }, replayOnRelaunch: false, resumeInput: ':resume',
+    refreshWorker: (task, options) => require('./zcode-readiness').refreshWorker(task, options),
+    reconcileCancellation: task => require('./zcode-cancellation').reconcileCancellation(task),
     buildCommand(task, resumeId) {
       return ['&', psQuote(process.execPath), psQuote(path.join(config().root, 'bin', 'zcode-worker.js')),
         ...(resumeId ? [psQuote(resumeId)] : [])].join(' ');
@@ -64,7 +67,7 @@ const agents = {
       const state = readJson(path.join(taskDir(task.id), 'zcode-state.json'), null);
       return state?.state === 'blocked' ? { type: state.reason, requiresAction: true,
         originalExecutionMayContinue: state.originalExecutionMayContinue ?? true,
-        message: `ZCode blocked: ${state.reason}` } : null;
+        message: `ZCode blocked: ${state.reason}${state.diagnostic ? ` (${state.diagnostic.stage}: ${state.diagnostic.message})` : ''}` } : null;
     },
     readPromptContext(task) {
       const state = readJson(path.join(taskDir(task.id), 'zcode-state.json'), null);
@@ -85,6 +88,7 @@ const agents = {
       if (task.model) args.push('--model', psQuote(task.model));
       if (task.effort) args.push('--effort', psQuote(task.effort));
       args.push('--add-dir', psQuote(taskDir(task.id)));
+      if (task.agyDeliveryProfile?.version === '1.4.10') args.push('--settings', psQuote(JSON.stringify({ queuedMessages: 'queue' })));
       return args.join(' ');
     },
     readBlocker(task) {

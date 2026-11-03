@@ -46,3 +46,7 @@ buildCommand以已核验ID启动原生agy --conversation，普通任务通过Pan
 opencode-worker在Pane内启动原生TUI，同进程观察器经官方CLI API核对会话、active、待审批和表单，仅变化时上报Herdr身份与状态。prepareWorker创建或核验真实sessionID，恢复活跃会话时不修改或重放原执行。验收/取消后不继续API轮询。
 
 可选回调保留公共编排：prepareSubmission在提交前更新会话指令及显式模型/权限；submitWorker经官方API提交稳定准入ID和任务指针；cancelWorker请求协议中断并核验；refreshWorker在恢复监听前刷新协议状态，避免旧blocked误收口。未实现回调的旧适配器继续使用原来的终端输入和Escape。会话指令使用experimental持久键，需随上游版本复验；其强度与具体权限边界见[接入说明](../../docs/OpenCode接入与验证.md)。
+
+可选cancellationState(task)仅只读核验原生身份与执行是否停止，返回confirmed、reason及可用的outcome；confirmed不能表示业务验收成功。当前仅OC实现，需连续两次无活跃工作、审批和表单的精确会话快照。公共cancellation模块保存取消绑定与一次中断尝试；cancel_pending的recover只对账，Pane缺失不能代替原生证据，也不能阻止已停止任务收口。其他适配器取消流程保持原有实现。
+
+refreshWorker(task, {forSubmission:true})在公共submit的身份检查之后、轮次递增之前核对OC准入资格并刷新投影；普通恢复调用不传该选项。round 0只有完全没有提交证据时才能把原生旧failed投影为可准入，现有审批、活动、租约冲突及不确定准入仍阻止提交。prepareSubmission保存本轮原生终态基线，绑定任务与执行身份；旧failed/idle时间未变时不产生本轮完成或活动证据，新失败仍阻塞。公共submit准备失败时恢复内存中的原轮次及待发任务书；发送开始后的不确定结果仍持久保留，禁止自动重试。旧进程不支持热加载，安全重附着方式见OC说明。

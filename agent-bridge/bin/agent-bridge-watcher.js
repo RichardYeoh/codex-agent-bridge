@@ -44,12 +44,17 @@ async function main() {
       '--until', 'idle', '--until', 'done', '--until', 'blocked',
     ];
     if (timeoutMs > 0) waitArgs.push('--timeout', String(timeoutMs));
-    const response = api(task.herdrSession, waitArgs, { timeout: timeoutMs > 0 ? timeoutMs + 5000 : 0 });
+    const response = task.agent === 'zcode'
+      ? { agent: await require('../lib/zcode-settlement').waitExecution(task, { isActive: () => {
+        const current = loadTask(taskId); return current.round === round && current.status === 'running';
+      } }) }
+      : api(task.herdrSession, waitArgs, { timeout: timeoutMs > 0 ? timeoutMs + 5000 : 0 });
     await withLock(taskId, async () => {
     task = loadTask(taskId);
     if (task.round !== round || task.status !== 'running') return;
     const payload = resultPayload(response);
     const agent = assertWorker(task, payload?.agent || agentInfo(task.herdrSession, task.paneId));
+    if (agent.tab_id) task.tabId = agent.tab_id;
     task.completionSeq = agent.completion_seq || null;
     const promptContext = getAgent(task.agent).readPromptContext?.(task);
     if (promptContext) task.promptContext = promptContext;
@@ -83,8 +88,11 @@ async function main() {
     task = loadTask(taskId);
     if (task.round !== round || task.status !== 'running') return;
     const timedOut = error.herdrCode === 'timeout' || error.code === 'ETIMEDOUT';
-    task.status = timedOut ? 'blocked' : 'failed';
-    if (timedOut) task.blocker = { type: 'wait_timeout', requiresAction: true, originalExecutionMayContinue: true };
+    task.status = timedOut || task.agent === 'zcode' ? 'blocked' : 'failed';
+    if (timedOut || task.agent === 'zcode') task.blocker = {
+      type: task.agent === 'zcode' ? 'observer_unavailable' : 'wait_timeout',
+      requiresAction: true, originalExecutionMayContinue: true,
+    };
     task.watcherPid = null;
     task.settlementSeq = (task.settlementSeq || 0) + 1;
     task.error = error.message;

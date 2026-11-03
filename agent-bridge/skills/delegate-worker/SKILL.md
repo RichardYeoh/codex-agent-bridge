@@ -111,6 +111,8 @@ node $bridge cancel <任务ID>
 
 `rework`追加新要求；`resume`处理failed/blocked，必要时按已保存的执行会话ID重建Pane；`recover`对账、重启watcher或补发已明确失败的通知。ZCode普通resume重连权威快照、观察原commandId，重建Pane不重发原指令。自动重投任务可能重复产生副作用，恢复前先核对交付和终端。
 
+ZCode观察窗口自动续订；尾窗没有turnHeader时，匹配的activeWorks只证明原命令仍在执行，结束须以同session/command的权威历史核实。原生正常结束且指定交付存在才进入review_pending；缺报告为delivery_missing，禁止凭文件存在或agent idle单独判断完成。观察器持有Relay时禁止额外snapshot探针争抢席位。用户已在原session人工提交后，不得再rework同份任务；先核对原始envelope、接纳回执、当前原生命令与旧轮终态，再用adopt-zcode登记下一轮，仅附着观察。用法见{{AGENT_BRIDGE_ROOT}}/../docs/ZCode长任务观察与人工命令接管.md。旧轮完成通知不授权关闭正在执行新命令的Pane。
+
 返工改变正式要求或验收时同时传 `--spec-file <更新后的规格JSON>`；只补充已定位缺陷时使用简洁的--prompt-file差量。任务完结后保留执行会话台账，后续相关任务默认按登记ID重新拉起已验收会话，而不是长期保留空闲Pane；若用户要求保留的执行者仍存活，则核对身份后直接复用。只有实际绑定相同会话才能按已有上下文精简提示。
 
 重建执行 Pane 时仍复用原项目 Workspace，不自动新建 Workspace。`resume --force` 会明确重投已保存任务，只能在已检查现场、确认可以重试后使用；普通 `recover` 不因连接错误自动重发任务。

@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { AgyClient } = require('./agy-client');
+const { spawnSync } = require('node:child_process');
 const { config, readJson, writeJsonAtomic, ensureDir, now } = require('./util');
 const KEY = 'codex-agent-bridge-agy';
 
@@ -49,6 +50,13 @@ function ensureHooks(task) {
 
 async function prepareWorker(task, resumeId) {
   ensureHooks(task);
+  if (!/\.c?js$/i.test(config().agy)) {
+    const version = spawnSync(config().agy, ['--version'], { encoding: 'utf8', windowsHide: true, timeout: 5000 });
+    if (!version.error && version.status === 0 && version.stdout.trim() === '1.4.10') {
+      // Only the validated version gets deterministic TUI delivery keys. / 仅对已验证版本设置确定的TUI投递按键。
+      task.agyDeliveryProfile = { version: '1.4.10', queuedMessages: 'queue', immediateKey: 'alt+m' };
+    }
+  }
   const client = new AgyClient(config().agy, task, resumeId);
   try {
     const id = await client.ready;

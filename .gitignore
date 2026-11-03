@@ -14,3 +14,12 @@ __pycache__/
 *.p12
 .DS_Store
 Thumbs.db
+
+# Machine configuration and transient output / 本机配置与临时输出
+.codex/
+.herdr/
+*.log
+*.tmp
+*.bak
+*.backup
+coverage/

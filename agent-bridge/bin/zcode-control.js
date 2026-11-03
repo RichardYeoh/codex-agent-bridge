@@ -4,6 +4,7 @@
 const path = require('node:path');
 const { loadTask, taskDir, writeJsonAtomic } = require('../lib/util');
 const { ZCodeRemote, Conversation, readBinding } = require('../lib/zcode-remote');
+const { safeMessage } = require('../lib/zcode-errors');
 
 async function main() {
   const [id, action, interactionId] = process.argv.slice(2);
@@ -32,4 +33,4 @@ async function main() {
     process.stdout.write(JSON.stringify({ status: ack.status, reasonCode: ack.reasonCode }) + '\n');
   } finally { await conversation?.dispose(); remote.close(); }
 }
-main().catch(() => { process.stderr.write('ZCode control failed; no automatic retry was performed.\n'); process.exitCode = 1; });
+main().catch(error => { process.stderr.write(`ZCode control failed: ${safeMessage(error.message)}; no automatic retry was performed.\n`); process.exitCode = 1; });

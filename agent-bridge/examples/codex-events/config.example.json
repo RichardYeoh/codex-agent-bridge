@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "stateDir": "<ABS_PRIVATE_STATE_DIRECTORY>",
+  "maxEvents": 2000,
+  "targets": [
+    {
+      "id": "codex-doc-owner",
+      "sessionId": "<EXPLICIT_ALLOWED_SESSION_ID>",
+      "cwd": "<EXACT_ORIGINAL_CLI_DIRECTORY>",
+      "principals": ["ydot"]
+    }
+  ]
+}

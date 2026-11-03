@@ -4,7 +4,11 @@
 
 当前版本：0.5.0。CBC要求Node.js 20及以上；ZCode执行端使用Node.js 24及以上、已登录并启用远控的ZCode Desktop。运行环境保持原生Windows、PowerShell与Herdr。公开源码不包含认证配置或本机原始会话。
 
+CBC 2.179.2的DeepSeek 1M窗口已通过显式载入[窗口预设](agent-bridge/examples/cbc-context-1m.json)的真实TUI及短请求验证。2026-11-03检查发现本机cbc三个入口的参数注入已失效，普通cbc及桥接默认启动不能保证1M；桥接自身尚未直接传入该预设。安装、检查、恢复及npm升级边界见[CBC窗口验证说明](docs/CBC上下文窗口设置与验证.md)；新机器不会因克隆仓库自动改动全局入口。
+
 GitHub仓库：[RichardYeoh/codex-agent-bridge](https://github.com/RichardYeoh/codex-agent-bridge)。验证工作流使用Windows运行器，执行自动回归和交付验收。
+
+发布前运行`npm run check:publication`检查已跟踪及未忽略的新文件，暂存后运行`node tools/check-publication.cjs --staged`检查实际提交内容。本机状态、认证配置、原生会话身份、依赖、归档及临时输出不得入库；`.local`中的证据仅在维护机器保留。当前CBC默认1M入口失效及ZCode执行恢复尚未真实补验的限制随源码保留，不以隔离回归替代业务恢复证明。
 
 ## 安装
 
@@ -50,6 +54,8 @@ oc外包交付明显低质，或同一任务连续两次交付未达要求时，
 
 ## 状态、暂停与恢复
 
+CBC已取消任务可通过dispatch --resume-task <旧任务ID>严格沿用原生会话，不需要伪造accepted。ZCode cancel_pending且Pane缺失时，recover可只读核对原命令与空闲状态后确认取消；原生不确定、活动或审批仍保持阻塞。具体步骤见[CBC终态会话接续与取消核对](docs/CBC终态会话接续与取消核对.md)。
+
 默认任务状态在本机的 `%LOCALAPPDATA%/agent-bridge`，也可通过AGENT_BRIDGE_STATE_DIR指定。未完成任务必须保留原状态根和执行Agent原生会话数据。
 
 ```powershell
@@ -63,9 +69,13 @@ node $bridge notifications pause --codex-thread $env:CODEX_THREAD_ID
 node $bridge notifications resume --codex-thread $env:CODEX_THREAD_ID
 ```
 
-普通终端中CODEX_THREAD_ID可能未设置，此时传原线程ID。暂停通知不取消执行；停止任务使用cancel并确认结果。断网、限流、配额耗尽及等待超时保留会话与轮次，不自动重派。监听默认30分钟，可在派工时配置；超时不表示worker已经停止。普通resume在存活Pane上恢复监听，需要继续指令时在原会话rework。
+普通终端中CODEX_THREAD_ID可能未设置，此时传原线程ID。暂停通知不取消执行；停止任务使用cancel并确认结果。断网、限流、配额耗尽及等待超时保留会话与轮次，不自动重派。其他执行端监听默认30分钟，可在派工时配置；超时不表示worker已经停止。ZCode将该时长作为可自动续订的观察窗口，按原命令权威终态收口。普通resume在存活Pane上恢复监听，需要新指令时使用rework；已经人工提交的ZCode命令不得再次rework重投，应按[长任务观察与命令接管](docs/ZCode长任务观察与人工命令接管.md)核对后adopt。
 
 同一状态根与Codex线程合并保留一条提醒，确认、返工、恢复、验收或取消会撤回失效项。通知服务不可用时本地pending，入队响应不确定时uncertain，恢复后对账。已进入执行的消息无法撤回。完整参数见[协调器说明](agent-bridge/README.md)。
+
+OC的旧任务若停在cancel_pending，可在原状态根执行recover再读取status。恢复仅核验原生会话：确认无活跃工作、审批和表单后收口cancelled，Pane已关闭也可处理；不重发中断或任务，不重建会话。仍活跃或API证据不足时保留阻塞，详见[OC状态与恢复](docs/OpenCode接入与验证.md#状态与恢复)。
+
+OC新任务在round 0、尚未提交时，不再因原生会话上一轮failed而直接阻塞。普通resume核验身份、租约及原生空闲后提交原任务书；本轮失败仍单独上报。主控和共享OC服务无需重启，已运行的旧Pane观察器需由业务主控在核实空闲和归属后关闭，再普通resume按原ID重新附着，详见[历史失败与新任务准入](docs/OpenCode接入与验证.md#历史失败与新任务准入)。
 
 ## 持续维护与扩展
 
@@ -93,3 +103,10 @@ node $bridge notifications resume --codex-thread $env:CODEX_THREAD_ID
 当前验证结果见[evidence/2026-10-27-integration](evidence/2026-10-27-integration/README.md)，原8项交付验收保留。新版通知的空闲自动唤醒仍需真实补验；整机重启、所有权限分支和长期无人值守未全面验证。Codex实验性队列接口在0.164.0验证，升级后需复验。
 
 仓库公开可见，当前未授予开源许可证；是否添加许可证另行确定。
+
+
+## Codex到YDot的事件通知增量（接入已取消）
+
+用户已取消本次接入。官方Tunnel客户端、安装包、启动绑定及采集配置/状态已移入.local/archives/YDOT-BRIDGE-CLEANUP-20261031-C1；约91.98 MiB可恢复保留，未永久删除。父项目三项观察Hook已精确移除，用户通过/hooks处理后，官方原会话运行清单确认0项；底层信任记录未清理。旧启动入口因活动绑定缺失而失败关闭，不自动查找归档。
+
+事件桥接源码、测试、文档及历史校验/验收证据保留；既有Agent派工与队列RPC不变，不新增远程shell或审批工具。清理仅做两项精确回滚回归，2/2通过，归档摘要逐项一致，未重跑无关全量。详细结果、恢复清单和自然Stop后续观察边界见[操作清单第9节](docs/YDot安全接入操作清单.md#9-c1取消接入与可恢复清理)。旧安装和密钥输入说明为历史方案，不能继续执行。

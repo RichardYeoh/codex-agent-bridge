@@ -1,0 +1,23 @@
+# Reference only; no tunnel, key, profile, or process is created by this file. / 仅供参考，本文件不创建隧道、密钥、配置档或进程。
+# Supply the authorized tunnel ID through CONTROL_PLANE_TUNNEL_ID. / 经CONTROL_PLANE_TUNNEL_ID提供已授权的真实隧道ID。
+control_plane:
+  api_key: env:CONTROL_PLANE_API_KEY
+  poll_channels: [main]
+cloudflared:
+  managed: false
+mcp:
+  server_urls:
+    - channel: main
+      url: http://127.0.0.1:42589/mcp
+  extra_headers:
+    Authorization: env:EVENT_BRIDGE_AUTHORIZATION
+  discovery_extra_headers:
+    Authorization: env:EVENT_BRIDGE_AUTHORIZATION
+  startup_wait_timeout: 10s
+health:
+  listen_addr: 127.0.0.1:42590
+admin_ui:
+  open_browser: false
+log:
+  level: info
+  format: json

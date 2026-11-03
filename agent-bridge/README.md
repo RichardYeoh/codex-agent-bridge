@@ -34,6 +34,8 @@ agy使用原生交互CLI，加--agent agy选择。支持--model、--effort，未
 
 ## 恢复与通知
 
+CBC支持dispatch --resume-task <旧任务ID>，严格续用同状态根中accepted/cancelled任务捕获的原生会话，不静默新建。取消后的新任务使用完整规格，旧状态不改为accepted；sessions.actualTaskStatus与交付回执lastStatus分别显示。ZCode的cancel_pending在Pane缺失时可由recover只读核对原命令与无活动快照，证据齐全才确认取消，不恢复或重发业务。命令、保护条件及验证见[终态接续与取消核对](../docs/CBC终态会话接续与取消核对.md)。
+
 ```powershell
 node $bridge recover <任务ID> --codex-thread <目标Codex线程ID>
 node $bridge resume <任务ID>

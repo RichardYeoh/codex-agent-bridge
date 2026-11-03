@@ -44,11 +44,46 @@ function verifySession(task, info) {
       || !sameDirectory(info.location?.directory, task.cwd)) throw new Error('OpenCode native session or directory mismatch');
 }
 
-function configure(task, request = call) {
+function nativeState(task, request) {
+  if (!task.workerSessionId) throw new Error('OpenCode native state requires the saved session ID');
   const params = { sessionID: task.workerSessionId };
   const info = request('session.get', params, undefined, task.cwd);
   verifySession(task, info);
-  if (request('session.active', {}, undefined, task.cwd)[info.id]) throw new Error('OpenCode session is already running; no task resubmitted');
+  const active = request('session.active', {}, undefined, task.cwd);
+  const permissions = request('session.permission.list', params, undefined, task.cwd);
+  const forms = request('session.form.list', params, undefined, task.cwd);
+  if (!active || typeof active !== 'object' || Array.isArray(active) || !Array.isArray(permissions) || !Array.isArray(forms)) {
+    throw new Error('OpenCode native execution state is unavailable or malformed');
+  }
+  return { info, active: Boolean(active[info.id]), needsInput: permissions.length > 0 || forms.length > 0 };
+}
+
+function unsubmittedInitial(task) {
+  if (task.round !== 0 || task.status === 'submission_unknown' || task.submission != null || task.opencodeSubmissionBaseline
+      || task.history?.some(item => item.status === 'submitted')) return false;
+  const dir = taskDir(task.id);
+  return !fs.existsSync(dir) || !fs.readdirSync(dir).some(name => /^round-\d+-opencode-admission\.json$/.test(name));
+}
+
+function submissionBinding(task) {
+  return { taskId: task.id, round: task.round, sessionId: task.workerSessionId, cwd: task.cwd,
+    herdrSession: task.herdrSession, paneId: task.paneId, terminalId: task.terminalId };
+}
+
+function unchangedPreviousFailure(task, info) {
+  const baseline = task.opencodeSubmissionBaseline;
+  return ['running', 'submission_unknown'].includes(task.status) && task.submission != null
+    && baseline?.outcome === 'failed' && Number.isFinite(baseline.idleAt) && baseline.idleAt > 0
+    && baseline.idleAt === info.time?.idle
+    && Object.entries(submissionBinding(task)).every(([key, value]) => baseline[key] === value)
+    && task.history?.some(item => item.round === task.round && item.status === 'submitted');
+}
+
+function configure(task, request = call) {
+  const params = { sessionID: task.workerSessionId };
+  const { info, active, needsInput } = nativeState(task, request);
+  if (active) throw new Error('OpenCode session is already running; no task resubmitted');
+  if (needsInput) throw new Error('OpenCode session requires user input; no configuration changed or task submitted');
   const defaultModel = task.effort && !task.model && !info.model
     ? request('model.default', { 'location[directory]': task.cwd }, undefined, task.cwd) : null;
   const chosen = modelRef(task, info.model || (defaultModel ? { id: defaultModel.id, providerID: defaultModel.providerID } : null));
@@ -75,6 +110,15 @@ function configure(task, request = call) {
   return info;
 }
 
+function prepareSubmission(task, request = call) {
+  configure(task, request);
+  const { info, active, needsInput } = nativeState(task, request);
+  if (active || needsInput) throw new Error('OpenCode session changed before admission; no task submitted');
+  // Bind the prior terminal outcome to this admission; identical old failures cannot settle the new round. / 将历史终态绑定到本轮准入，相同旧失败不得收口新轮次。
+  task.opencodeSubmissionBaseline = { ...submissionBinding(task), outcome: info.outcome || null,
+    idleAt: info.time?.idle || 0, capturedAt: now() };
+}
+
 function prepareWorker(task, resumeId, request = call) {
   if (resumeId) {
     task.workerSessionId = resumeId;
@@ -95,26 +139,72 @@ function prepareWorker(task, resumeId, request = call) {
 }
 
 function snapshot(task, request = call) {
-  const params = { sessionID: task.workerSessionId };
-  let info = request('session.get', params, undefined, task.cwd);
-  verifySession(task, info);
-  const active = request('session.active', {}, undefined, task.cwd)[info.id];
-  const permissions = request('session.permission.list', params, undefined, task.cwd);
-  const forms = request('session.form.list', params, undefined, task.cwd);
-  if (permissions.length || forms.length) return { state: 'blocked', reason: 'user_input_required', originalExecutionMayContinue: true };
-  if (active) return { state: 'working' };
+  let native = nativeState(task, request);
+  if (native.needsInput) return { state: 'blocked', reason: 'user_input_required', originalExecutionMayContinue: true };
+  if (native.active) return { state: 'working' };
   // Completion may race the earlier get; refresh outcome before publishing idle. / 完成可能与前次get并发，发布空闲前刷新结果。
-  info = request('session.get', params, undefined, task.cwd);
-  verifySession(task, info);
-  if (request('session.active', {}, undefined, task.cwd)[info.id]) return { state: 'working' };
-  if (info.outcome === 'failed') return { state: 'blocked', reason: 'execution_failed', originalExecutionMayContinue: false };
+  native = nativeState(task, request);
+  if (native.needsInput) return { state: 'blocked', reason: 'user_input_required', originalExecutionMayContinue: true };
+  if (native.active) return { state: 'working' };
+  const { info } = native;
+  if (info.outcome === 'failed') {
+    if (unsubmittedInitial(task) || unchangedPreviousFailure(task, info)) {
+      return { state: 'idle', reason: 'previous_execution_failed', outcome: 'failed', idleAt: info.time?.idle || 0 };
+    }
+    return { state: 'blocked', reason: 'execution_failed', originalExecutionMayContinue: false };
+  }
   return { state: 'idle', outcome: info.outcome || null, idleAt: info.time?.idle || 0 };
 }
 
-function interrupt(task, request = call) {
-  request('session.interrupt', { sessionID: task.workerSessionId, resume: 'false' }, undefined, task.cwd);
+function refreshWorker(task, { forSubmission = false } = {}, request = call, report = publish) {
+  if (forSubmission) {
+    if ((task.round === 0 && !unsubmittedInitial(task)) || task.status === 'submission_unknown'
+        || ['preparing', 'sending', 'uncertain'].includes(task.submission?.status)) {
+      throw new Error('OpenCode submission evidence is uncertain; reconcile before any new admission');
+    }
+    const { leaseForEvent } = require('./worker-lease');
+    const lease = leaseForEvent(task.stateDir, task.herdrSession, task.paneId, task.workerSessionId);
+    if (!lease || lease.taskId !== task.id || lease.terminalId !== task.terminalId || lease.workerSessionId !== task.workerSessionId) {
+      throw new Error('OpenCode submission Pane lease mismatch');
+    }
+    const other = require('./worker-scheduling').taskList(task.stateDir).find(item => item.id !== task.id
+      && !['accepted', 'cancelled'].includes(item.status) && item.workerSessionId === task.workerSessionId
+      && require('./agents').getAgent(item.agent).id === 'opencode');
+    if (other) throw new Error('OpenCode native session has another unresolved task; no task submitted');
+  }
   const state = snapshot(task, request);
-  if (state.state !== 'idle') throw new Error('OpenCode interruption not confirmed');
+  if (idleBelongsToRound(task, state)) report(task, state);
+  return state;
+}
+
+function cancellationState(task, request = call) {
+  if (!task.workerSessionId) throw new Error('OpenCode cancellation requires the saved native session ID');
+  const params = { sessionID: task.workerSessionId };
+  const observe = () => {
+    const info = request('session.get', params, undefined, task.cwd);
+    verifySession(task, info);
+    const active = request('session.active', {}, undefined, task.cwd);
+    const permissions = request('session.permission.list', params, undefined, task.cwd);
+    const forms = request('session.form.list', params, undefined, task.cwd);
+    if (!active || typeof active !== 'object' || Array.isArray(active) || !Array.isArray(permissions) || !Array.isArray(forms)) {
+      throw new Error('OpenCode cancellation state is unavailable or malformed');
+    }
+    return { confirmed: !active[info.id] && permissions.length === 0 && forms.length === 0,
+      reason: active[info.id] ? 'native_active' : permissions.length || forms.length ? 'native_input_pending' : 'native_idle',
+      outcome: ['failed', 'interrupted', 'success', 'completed'].includes(info.outcome) ? info.outcome : null };
+  };
+  const first = observe();
+  // Two native idle observations confirm stopping even after failure; Pane closure alone proves nothing. / 即使执行失败也须两次原生空闲观测确认停止，关闭Pane本身不构成证明。
+  return first.confirmed ? observe() : first;
+}
+
+function interrupt(task, request = call) {
+  const before = cancellationState(task, request);
+  if (before.confirmed) return before;
+  request('session.interrupt', { sessionID: task.workerSessionId, resume: 'false' }, undefined, task.cwd);
+  const state = cancellationState(task, request);
+  if (!state.confirmed) throw new Error('OpenCode interruption not confirmed');
+  return state;
 }
 
 function submitWorker(task, text, request = call, report = publish) {
@@ -131,6 +221,7 @@ function submitWorker(task, text, request = call, report = publish) {
 
 function idleBelongsToRound(task, state) {
   if (state.state !== 'idle' || !['running', 'submission_unknown'].includes(task.status)) return true;
+  if (state.reason === 'previous_execution_failed') return unsubmittedInitial(task);
   const submitted = task.history?.findLast(item => item.round === task.round && item.status === 'submitted');
   return state.idleAt >= Date.parse(submitted?.timestamp || task.createdAt);
 }
@@ -149,4 +240,4 @@ function publish(task, state, report = require('./herdr').api) {
   writeJsonAtomic(file, { ...receipt, reported: true });
 }
 
-module.exports = { call, prepareWorker, configure, snapshot, interrupt, submitWorker, verifySession, modelRef, idleBelongsToRound, publish };
+module.exports = { call, prepareWorker, configure, prepareSubmission, refreshWorker, snapshot, interrupt, cancellationState, submitWorker, verifySession, modelRef, idleBelongsToRound, publish };

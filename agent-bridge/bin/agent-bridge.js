@@ -176,21 +176,33 @@ function deliveryInstructions(task) {
 async function submit(task, promptBody, { activityTimeoutMs = 20000, startWatcherFn = startWatcher } = {}) {
   if (!promptBody) throw new Error('No pending task brief is available');
   assertSingleActive(task);
-  const before = assertWorker(task, agentInfo(task.herdrSession, task.paneId));
+  let before = assertWorker(task, agentInfo(task.herdrSession, task.paneId));
+  if (getAgent(task.agent).refreshWorker) {
+    await getAgent(task.agent).refreshWorker(task, { forSubmission: true });
+    before = assertWorker(task, agentInfo(task.herdrSession, task.paneId));
+  }
   if (!['idle', 'done'].includes(before.agent_status)) {
     throw new Error(`Worker is not ready for a new round: ${before.agent_status}`);
   }
-  const dir = ensureDir(taskDir(task.id));
-  task.round += 1;
-  const round = String(task.round).padStart(3, '0');
-  task.promptPath = path.join(dir, `round-${round}-prompt.md`);
-  task.deliveryPath = path.join(dir, 'deliveries', `round-${round}.md`);
-  task.promptBody = promptBody;
-  ensureDir(path.dirname(task.deliveryPath));
-  writeWorkerPolicy(task);
-  preparePromptContext(task, promptBody);
-  fs.writeFileSync(task.promptPath, `${deliveryInstructions(task)}\n${promptBody}\n`);
-  await getAgent(task.agent).prepareSubmission?.(task);
+  const preparationBaseline = structuredClone(task);
+  try {
+    const dir = ensureDir(taskDir(task.id));
+    task.round += 1;
+    const round = String(task.round).padStart(3, '0');
+    task.promptPath = path.join(dir, `round-${round}-prompt.md`);
+    task.deliveryPath = path.join(dir, 'deliveries', `round-${round}.md`);
+    task.promptBody = promptBody;
+    ensureDir(path.dirname(task.deliveryPath));
+    writeWorkerPolicy(task);
+    preparePromptContext(task, promptBody);
+    fs.writeFileSync(task.promptPath, `${deliveryInstructions(task)}\n${promptBody}\n`);
+    await getAgent(task.agent).prepareSubmission?.(task);
+  } catch (error) {
+    // No prompt has been sent: preserve the previous round and pending brief on preflight failure. / 尚未发送任务：预检失败时保留原轮次和待提交任务书。
+    for (const key of Object.keys(task)) if (!Object.hasOwn(preparationBaseline, key)) delete task[key];
+    Object.assign(task, preparationBaseline);
+    throw error;
+  }
   task.status = 'running';
   task.submission = { status: 'preparing', baselineCompletion: before.completion_seq || 0 };
   task.error = null;
@@ -247,6 +259,9 @@ async function dispatch(options) {
   const cwd = path.resolve(required(options.cwd, 'cwd'));
   if (!fs.existsSync(cwd) || !fs.statSync(cwd).isDirectory()) throw new Error(`Invalid cwd: ${cwd}`);
   const worker = getAgent(options.agent || 'cbc');
+  if (options['resume-task'] && (worker.id !== 'cbc' || options['new-session'])) {
+    throw new Error('--resume-task requires CBC and cannot be combined with --new-session');
+  }
   if (options.parallel && !options['worker-key']) throw new Error('Explicit parallel tasks require distinct --worker-key bindings');
   let zcodeConfig, zcodeBindingSha256;
   if (worker.id === 'zcode') {
@@ -262,6 +277,7 @@ async function dispatch(options) {
     id: options['task-id'] || makeTaskId(),
     agent: worker.id,
     workerKey: bindingKey(options['worker-key']),
+    ...(options['resume-task'] ? { resumeFromTaskId: options['resume-task'] } : {}),
     parallel: Boolean(options.parallel),
     ...(zcodeConfig ? { zcodeConfig, zcodeBindingSha256 } : {}),
     placement: placementFor(options),
@@ -291,6 +307,9 @@ async function dispatch(options) {
   try {
     await ensureServer(task.herdrSession);
     const reused = tryReuseContext(task, { fresh: Boolean(options['new-session']) });
+    if (task.resumeFromTaskId && !reused && !task.resumeContextSessionId) {
+      throw new Error('Explicit CBC session reuse was not attested; no new session created');
+    }
     if (worker.id === 'zcode' && !options.effort) task.effort = 'max';
     if (!reused) {
       task.model ||= worker.id === 'zcode' ? 'GLM-5.3-Flash' : null;
@@ -345,10 +364,11 @@ function applyReworkModel(task, options) {
 
 async function rework(options) {
   const task = loadTask(required(options._[0], 'task id'));
-  if (!['review_pending', 'delivery_missing', 'failed'].includes(task.status)) {
+  if (!['review_pending', 'delivery_missing', 'failed'].includes(task.status) && !(task.agent === 'zcode' && task.status === 'blocked')) {
     throw new Error(`Rework requires review_pending/delivery_missing/failed; current: ${task.status}`);
   }
   if (task.watcherPid && processAlive(task.watcherPid)) throw new Error('A watcher is still active for this task');
+  require('../lib/messages').assertMessagesSettled(task);
   applyReworkModel(task, options);
   if (Object.hasOwn(options, 'model') || Object.hasOwn(options, 'effort')) {
     // Persist the requested model before native calls, so failures cannot restore an old pin silently. / 原生调用前保存目标模型，失败后不静默恢复旧模型绑定。
@@ -369,6 +389,10 @@ async function rework(options) {
 async function cancel(options) {
   const task = loadTask(required(options._[0], 'task id'));
   if (['accepted', 'cancelled'].includes(task.status)) return task;
+  if (task.status === 'cancel_pending' && getAgent(task.agent).reconcileCancellation) {
+    return getAgent(task.agent).reconcileCancellation(task);
+  }
+  if (getAgent(task.agent).cancellationState) return require('../lib/cancellation').cancelNative(task);
   task.status = 'cancel_pending';
   saveTask(task);
   try {
@@ -427,8 +451,14 @@ async function resume(options) {
     await launchWorker(task, task.workerSessionId, { trustFolder: true });
     relaunched = true;
   }
+  // An unsubmitted OC task stays blocked until real admission; a readiness error must not fabricate running. / OC未提交任务须真实准入后才进入运行，准入失败不能伪造running。
+  if (task.agent === 'opencode' && task.round === 0) {
+    await submit(task, pendingRoundPrompt(task));
+    return task;
+  }
   task.status = 'running';
   task.error = null;
+  if (task.agent === 'zcode') task.observationRequestedAt = now();
   task.history.push({ round: task.round, status: 'resumed', timestamp: now(), relaunched });
   // Refresh protocol state before waiting; a just-answered dialog may still look blocked. / 等待前刷新协议状态，刚答复的对话框可能仍显示阻塞。
   if (!relaunched) await getAgent(task.agent).refreshWorker?.(task);
@@ -441,7 +471,8 @@ async function resume(options) {
   if (!relaunched && getAgent(task.agent).resumeInput) {
     api(task.herdrSession, ['pane', 'send-text', task.paneId, getAgent(task.agent).resumeInput]);
     api(task.herdrSession, ['pane', 'send-keys', task.paneId, 'enter']);
-    await waitForAgent(task, ['working', 'idle', 'done'], 20000);
+    // ZCode's old blocked projection may outlive the resume write. Its watcher awaits a fresh bound receipt. / ZCode旧阻塞投影可能晚于恢复写入，其观察器等待新的绑定回执。
+    if (task.agent !== 'zcode') await waitForAgent(task, ['working', 'idle', 'done'], 20000);
   }
   task.watcherPid = startWatcher(task.id);
   saveTask(task);
@@ -452,6 +483,7 @@ async function resume(options) {
 function accept(options) {
   const task = loadTask(required(options._[0], 'task id'));
   if (task.status !== 'review_pending') throw new Error(`Accept requires review_pending; current: ${task.status}`);
+  require('../lib/messages').assertMessagesSettled(task);
   task.status = 'accepted';
   task.history.push({ round: task.round, status: 'accepted', timestamp: now() });
   saveTask(task);
@@ -479,6 +511,17 @@ function pendingRoundPrompt(task) {
 
 async function recoverOne(task) {
   const actions = [];
+  if (task.status === 'cancel_pending' && (getAgent(task.agent).cancellationState || getAgent(task.agent).reconcileCancellation)) {
+    const result = getAgent(task.agent).reconcileCancellation
+      ? await getAgent(task.agent).reconcileCancellation(task)
+      : await require('../lib/cancellation').cancelNative(task, { reconcileOnly: true });
+    if (result.status === 'cancelled' && task.codexThread) {
+      try { await require('../lib/notification-control').reconcileThread(task.codexThread); }
+      catch (error) { task.notificationCleanupError = error.message; saveTask(task); }
+    }
+    return [result.status === 'cancelled' ? 'native cancellation confirmed; original session retained, no interrupt or prompt sent'
+      : 'cancellation remains pending; native evidence unavailable or still active, no interrupt or prompt sent'];
+  }
   if (['created', 'ready', 'recovering'].includes(task.status)) {
     task.status = 'failed';
     task.error = 'Startup was interrupted; inspect the saved pane before explicit rework or cancellation';
@@ -579,9 +622,30 @@ async function main() {
     else if (action === 'status') result = { ...controlState(thread), pending: pendingTasks(thread) };
     else throw new Error('notifications <pause|resume|status|pending|reconcile>');
   }
+  else if (command === 'message') {
+    const taskId = required(options._[0], 'task id');
+    result = await withLock(taskId, async () => {
+      const messages = require('../lib/messages');
+      const receipt = await messages.deliver(loadTask(taskId), { id: required(options['message-id'], 'message-id'),
+        mode: required(options.mode, 'mode'), text: promptFrom(options), waitMs: Number(options['wait-ms'] ?? 15000) });
+      return messages.publicReceipt(receipt);
+    });
+  }
+  else if (['message-status', 'message-reconcile'].includes(command)) {
+    const messages = require('../lib/messages'), task = loadTask(required(options._[0], 'task id'));
+    const id = required(options['message-id'], 'message-id');
+    result = messages.publicReceipt(command === 'message-reconcile' ? await messages.reconcile(task, id) : messages.readMessage(task, id));
+  }
   else if (command === 'dispatch') {
     options['task-id'] ||= makeTaskId();
     result = await withLock('dispatch-global', () => withLock(options['task-id'], () => dispatch(options)));
+  }
+  else if (command === 'adopt-zcode') {
+    const id = required(options._[0], 'task id');
+    result = await withLock('dispatch-global', () => withLock(id, () => require('../lib/zcode-adoption').adopt(loadTask(id), {
+      commandFile: required(options['command-file'], 'command-file'), specFile: required(options['spec-file'], 'spec-file'),
+      deliveryFile: required(options['delivery-file'], 'delivery-file'), round: Number(required(options.round, 'round')),
+    })));
   }
   else if (['rework', 'resume', 'accept'].includes(command)) {
     result = await withLock('dispatch-global', () => withLock(required(options._[0], 'task id'), () => mutations[command](options)));
@@ -603,9 +667,9 @@ async function main() {
       .filter(id => fs.existsSync(path.join(root, id, 'task.json')))
       .map(id => readJson(path.join(root, id, 'task.json'))) : [];
   } else {
-    throw new Error('Usage: agent-bridge <dispatch|rework|resume|status|read|cancel|accept|ack|recover|notifications|list|agents|sessions> [options]');
+    throw new Error('Usage: agent-bridge <dispatch|rework|resume|adopt-zcode|status|read|cancel|accept|ack|recover|notifications|list|agents|sessions> [options]');
   }
-  if (['accept', 'cancel', 'rework', 'resume'].includes(command) && result.codexThread) {
+  if (['accept', 'cancel', 'rework', 'resume', 'adopt-zcode'].includes(command) && result.codexThread) {
     try { await require('../lib/notification-control').reconcileThread(result.codexThread); }
     catch (error) { result.notificationCleanupError = error.message; }
   }

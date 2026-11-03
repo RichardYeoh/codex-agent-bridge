@@ -3,12 +3,12 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const crypto = require('node:crypto');
-const { config, readJson, writeJsonAtomic, now, event, saveTask } = require('./util');
+const { config, readJson, writeJsonAtomic, now, event, saveTask, taskDir, processAlive } = require('./util');
 const { agentInfo, api, resultPayload } = require('./herdr');
 const { getAgent, chooseAgentName } = require('./agents');
 const { writeLease } = require('./worker-lease');
 const { POLICY_VERSION, renderWorkerPolicy } = require('./worker-policy');
-const { bindingKey } = require('./worker-binding');
+const { bindingKey, sameBinding } = require('./worker-binding');
 
 function digest(text) { return crypto.createHash('sha256').update(text).digest('hex'); }
 function projectKey(cwd, agent, session, workerKey) {
@@ -35,7 +35,14 @@ function listContexts(cwd, agent, workerKey) {
     .filter(item => (!cwd || path.resolve(item.cwd).toLowerCase() === path.resolve(cwd).toLowerCase())
       && (!canonicalAgent || item.agent === canonicalAgent) && (workerKey === undefined || bindingKey(item.workerKey) === bindingKey(workerKey)))
     .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))
-    .map(item => ({ ...item, workerKey: bindingKey(item.workerKey) }))
+    .map(item => {
+      let actualTaskStatus = null;
+      try {
+        const source = readJson(path.join(taskDir(item.lastTaskId), 'task.json'), null);
+        if (source && source.workerSessionId === item.workerSessionId && sameBinding(source, item)) actualTaskStatus = source.status;
+      } catch {}
+      return { ...item, workerKey: bindingKey(item.workerKey), actualTaskStatus };
+    })
     .filter((item, index, entries) => entries.findIndex(other => projectKey(other.cwd, other.agent, other.herdrSession, other.workerKey)
       === projectKey(item.cwd, item.agent, item.herdrSession, item.workerKey)) === index);
 }
@@ -75,6 +82,7 @@ function recordContext(task) {
     model: task.model, effort: task.effort, permissionMode: task.permissionMode,
     skipPermissions: task.skipPermissions, updatedAt: now(),
     zcodeBindingSha256: task.zcodeBindingSha256,
+    agyDeliveryProfile: task.agyDeliveryProfile,
     history: [...(previous?.history || []).slice(-19), { taskId: task.id, round: task.round, status: task.status }],
   });
 }
@@ -104,19 +112,36 @@ function preparePromptContext(task, delta) {
 }
 
 function tryReuseContext(task, { fresh = false, inspect = agentInfo, call = api, attest = observedContext } = {}) {
+  const explicit = Boolean(task.resumeFromTaskId);
+  if (explicit && (fresh || task.agent !== 'cbc')) throw new Error('--resume-task requires CBC and cannot be combined with --new-session');
   if (fresh || !task.taskSpec) return false;
-  const prior = loadContext(task);
-  if (!prior || prior.lastStatus !== 'accepted' || prior.policyVersion !== POLICY_VERSION) return false;
-  if (prior.policySha256 !== digest(renderWorkerPolicy(task))) return false;
+  let prior = loadContext(task);
+  const priorTask = explicit ? readJson(path.join(taskDir(task.resumeFromTaskId), 'task.json'), null)
+    : prior ? readJson(path.join(task.stateDir, 'tasks', prior.lastTaskId, 'task.json'), null) : null;
+  const cancelled = task.agent === 'cbc' && priorTask?.status === 'cancelled';
+  const requireReuse = explicit || cancelled;
+  const unavailable = reason => { if (requireReuse) throw new Error('CBC original session reuse refused: ' + reason + '; no new session created'); return false; };
+  if (explicit || cancelled) {
+    if (!priorTask || !['accepted', 'cancelled'].includes(priorTask.status)) return unavailable('source task is not accepted or cancelled');
+    if (!sameBinding(task, priorTask) || !priorTask.workerSessionId) return unavailable('source project, worker binding or native ID mismatch');
+    if (priorTask.watcherPid && processAlive(priorTask.watcherPid)) return unavailable('source watcher is still active');
+    const conflict = require('./worker-scheduling').taskList(task.stateDir).find(other => other.id !== task.id && other.id !== priorTask.id
+      && other.agent === 'cbc' && other.workerSessionId === priorTask.workerSessionId && !['accepted', 'cancelled'].includes(other.status));
+    if (conflict) return unavailable('native session has another unresolved owner');
+    // A terminal task is identity evidence, never an accepted technical delivery. / 终态任务仅提供身份依据，不代表技术交付已通过。
+    prior = { ...priorTask, lastTaskId: priorTask.id, lastStatus: priorTask.status,
+      policyVersion: priorTask.workerPolicyVersion, policySha256: priorTask.workerPolicySha256 };
+  }
+  if (!prior || (!requireReuse && prior.lastStatus !== 'accepted') || prior.policyVersion !== POLICY_VERSION) return unavailable('no compatible policy receipt');
+  if (prior.policySha256 !== digest(renderWorkerPolicy(task))) return unavailable('worker policy changed');
   if (task.placement?.mode === 'workspace'
-      || (task.placement?.workspaceId && task.placement.workspaceId !== prior.workspaceId)) return false;
+      || (task.placement?.workspaceId && task.placement.workspaceId !== prior.workspaceId)) return unavailable('workspace placement changed');
   if (task.permissionExplicit === false && typeof prior.skipPermissions === 'boolean') {
     task.permissionMode = prior.permissionMode; task.skipPermissions = prior.skipPermissions;
   }
   if ((task.model && prior.model !== task.model) || (task.effort && prior.effort !== task.effort)
-      || prior.skipPermissions !== task.skipPermissions || prior.permissionMode !== task.permissionMode) return false;
-  const priorTask = readJson(path.join(task.stateDir, 'tasks', prior.lastTaskId, 'task.json'), null);
-  if (priorTask?.status !== 'accepted') return false;
+      || prior.skipPermissions !== task.skipPermissions || prior.permissionMode !== task.permissionMode) return unavailable('model or permission profile changed');
+  if (!requireReuse && priorTask?.status !== 'accepted') return false;
   if (task.agent === 'zcode') {
     let priorBinding = prior.zcodeBindingSha256;
     if (!priorBinding && priorTask.zcodeConfig) {
@@ -125,7 +150,9 @@ function tryReuseContext(task, { fresh = false, inspect = agentInfo, call = api,
     if (priorBinding !== task.zcodeBindingSha256) return false;
   }
   const inherit = () => Object.assign(task, { workerSessionId: prior.workerSessionId,
+    agyDeliveryProfile: prior.agyDeliveryProfile || priorTask.agyDeliveryProfile,
     reusedFromTaskId: prior.lastTaskId, model: task.model || prior.model, effort: task.effort || prior.effort,
+    ...(cancelled ? { forceFullContext: true, reusedTerminalStatus: 'cancelled' } : {}),
     mainPaneId: task.placement?.anchorPaneId || task.mainPaneId || prior.mainPaneId });
   let agent;
   try { agent = inspect(task.herdrSession, prior.paneId); }
@@ -151,7 +178,7 @@ function tryReuseContext(task, { fresh = false, inspect = agentInfo, call = api,
     if (receipt?.sessionId !== prior.workerSessionId) throw new Error('Saved worker session changed; inspect before creating another session');
     if (task.placement?.mode === 'pane') {
       const anchor = resultPayload(call(task.herdrSession, ['pane', 'get', task.placement.anchorPaneId])).pane;
-      if (anchor?.workspace_id !== prior.workspaceId) return false;
+      if (anchor?.workspace_id !== prior.workspaceId) return unavailable('anchor workspace changed');
     }
     const values = resultPayload(call(task.herdrSession, ['agent', 'list'])).agents;
     inherit();
