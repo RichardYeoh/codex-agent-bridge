@@ -57,7 +57,7 @@ test('accepted worker is reused only after live session attestation and scope ma
     attest: () => ({ sessionId: 'session-1' }),
     call: (session, args) => args[0] === 'pane'
       ? { result: { pane: { workspace_id: 'w1', agent_session: { value: 'session-1' } } } }
-      : { result: { agents: [] } } };
+      : { result: { agents: [], panes: [] } } };
   assert.equal(tryReuseContext(fresh, options), true);
   assert.equal(fresh.workerSessionId, previous.workerSessionId);
   assert.equal(loadTask(fresh.id).reusedFromTaskId, previous.id);
@@ -94,7 +94,7 @@ test('closed panes plan native session restoration while transport failures neve
   const candidate = value('context-cold-next'); candidate.workerKey = prior.workerKey;
   candidate.placement = { mode: 'pane', anchorPaneId: 'w1:main', workspaceId: 'w1' };
   const missing = Object.assign(new Error('closed'), { herdrCode: 'pane_not_found' });
-  assert.equal(tryReuseContext(candidate, { inspect: () => { throw missing; }, call: () => ({ result: { agents: [] } }) }), false);
+  assert.equal(tryReuseContext(candidate, { inspect: () => { throw missing; }, call: () => ({ result: { agents: [], panes: [] } }) }), false);
   assert.equal(candidate.resumeContextSessionId, prior.workerSessionId);
   assert.equal(candidate.mainPaneId, 'w1:main');
   candidate.terminalId = 'new-terminal'; candidate.restoredContextSessionId = prior.workerSessionId;
@@ -102,7 +102,7 @@ test('closed panes plan native session restoration while transport failures neve
   assert.equal(candidate.promptContext.mode, 'delta');
   assert.throws(() => tryReuseContext(candidate, { inspect: () => { throw new Error('connection failed'); } }), /connection failed/);
   assert.throws(() => tryReuseContext(candidate, { inspect: () => { throw missing; },
-    call: () => ({ result: { agents: [{ terminal_id: prior.terminalId }] } }) }), /still present/);
+    call: () => ({ result: { panes: [], agents: [{ terminal_id: prior.terminalId }] } }) }), /present/);
 });
 
 test('legacy project receipts are reusable only through the default binding', () => {
@@ -127,7 +127,7 @@ test('delta carries all new optional constraints and compact receipts survive la
   assert.match(task.promptContext.delta.join('\n'), /No network/);
   assert.match(task.promptContext.delta.join('\n'), /Stop on missing input/);
   assert.match(task.promptContext.delta.join('\n'), /Keep prior public API/);
-  const receipt = { herdrSession: 'test', paneId: 'w1:p1', sessionId: 'session-1', timestamp: '2026-01-02', source: 'compact' };
+  const receipt = { taskId: task.id, terminalId: task.terminalId, herdrSession: 'test', paneId: 'w1:p1', sessionId: 'session-1', timestamp: '2026-01-02', source: 'compact' };
   fs.writeFileSync(path.join(root, 'hook-events.ndjson'), [receipt, { ...receipt, timestamp: '2026-01-03', source: 'tool' },
     { ...receipt, herdrSession: 'other', sessionId: 'wrong' }].map(JSON.stringify).join('\n'));
   assert.deepEqual(observedContext(task), { sessionId: 'session-1', compactAt: '2026-01-02' });

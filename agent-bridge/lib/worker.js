@@ -2,12 +2,12 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { getAgent } = require('./agents');
+const { matchesHerdrAgent } = require('./agents');
 
 function assertWorker(task, agent) {
-  const expected = getAgent(task.agent).herdrAgent;
-  if (!agent || agent.agent !== expected
+  if (!agent || !matchesHerdrAgent(task.agent, agent.agent)
       || (task.terminalId && agent.terminal_id !== task.terminalId)
+      || (task.workerSessionId && agent.agent_session?.value && agent.agent_session.value !== task.workerSessionId)
       || (task.agentName && !task.agentNameReleased && agent.name !== task.agentName)) {
     const error = new Error(`Worker identity mismatch for ${task.herdrSession}/${task.paneId}`);
     error.code = 'WORKER_IDENTITY_MISMATCH';
@@ -33,6 +33,8 @@ function updateWorkerSession(task) {
   for (let i = lines.length - 1; i >= 0; i -= 1) {
     try {
       const entry = JSON.parse(lines[i]);
+      if (task.agent === 'agy' && (entry.source !== 'agy-native-hook' || entry.terminalId !== task.terminalId)) continue;
+      if (entry.terminalId && task.terminalId && entry.terminalId !== task.terminalId) continue;
       // Pane IDs are local to a server, never global identities. / Pane ID 仅在所属服务内唯一。
       if (entry.taskId === task.id && entry.herdrSession === task.herdrSession
           && entry.paneId === task.paneId && entry.sessionId

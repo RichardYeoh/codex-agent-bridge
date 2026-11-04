@@ -36,15 +36,16 @@ class ZCodeRemote extends EventEmitter {
     Object.assign(this, { binding, Socket: socket, fetcher, credential, timeoutMs });
     this.pending = new Map();
     this.closed = false;
+    this.leaseRelease = null;
     this.clientId = 'codex-agent-bridge';
   }
 
   async connect() {
     if (this.closed || this.lease) throw new Error('ZCode remote already used; create a fresh connection object');
     // Hold the local seat before authentication; diagnostic tools must not kick an observer. / 认证前占有本地席位，诊断工具不得踢出观察器。
-    if (this.binding.sid && this.binding.mid) this.lease = acquire(this.binding);
+    if (this.binding.sid && this.binding.mid) this.lease = await acquire(this.binding);
     try { return await this.connectRelay(); }
-    catch (error) { this.close(); throw error; }
+    catch (error) { await this.close(); throw error; }
   }
 
   async connectRelay() {
@@ -63,7 +64,7 @@ class ZCodeRemote extends EventEmitter {
     this.ws = new this.Socket(`wss://zcode.z.ai/api/v1/remote/ws2?token=${encodeURIComponent(data.data.token)}&mid=${encodeURIComponent(this.binding.mid)}`);
     this.lastHeartbeat = Date.now();
     await new Promise((resolve, reject) => {
-      const timer = setTimeout(() => { reject(new Error('ZCode Desktop pairing timeout')); this.close(); }, this.timeoutMs);
+      const timer = setTimeout(() => { reject(new Error('ZCode Desktop pairing timeout')); void this.close().catch(() => {}); }, this.timeoutMs);
       this.pairing = { resolve: () => { clearTimeout(timer); resolve(); }, reject: error => { clearTimeout(timer); reject(error); } };
       this.ws.on('open', () => {
         this.send({ type: 'auth_init', device_sid: this.binding.sid });
@@ -75,7 +76,7 @@ class ZCodeRemote extends EventEmitter {
       this.ws.on('message', raw => this.receive(raw));
       this.ws.on('error', () => this.fail('ZCode relay connection failed'));
       this.ws.on('close', () => {
-        this.releaseLease();
+        void this.releaseLease().catch(error => this.emit('fault', error));
         if (!this.closed) this.fail('ZCode relay disconnected');
       });
     });
@@ -196,24 +197,38 @@ class ZCodeRemote extends EventEmitter {
     const error = new Error(message);
     this.fault = error;
     this.pairing?.reject(error);
-    this.close();
+    void this.close().catch(() => {});
     this.emit('fault', error);
   }
 
   close() {
-    if (this.closed) return;
+    if (this.closePromise) return this.closePromise;
     this.closed = true;
     clearInterval(this.beat);
     for (const pending of this.pending.values()) { clearTimeout(pending.timer); pending.reject(new Error('ZCode connection closed')); }
     this.pending.clear(); this.client?.dispose(); this.degraded?.dispose(); this.relay?.dispose();
-    this.ws?.close();
-    if (!this.ws || this.ws.readyState === WebSocket.CLOSED) this.releaseLease();
     const socket = this.ws;
-    setTimeout(() => socket?.terminate(), 500).unref();
+    this.closePromise = (async () => {
+      if (!socket || socket.readyState === WebSocket.CLOSED) { await this.releaseLease(); return; }
+      await new Promise(resolve => {
+        let timer;
+        const done = () => { clearTimeout(timer); resolve(); };
+        socket.once('close', done);
+        timer = setTimeout(() => { socket.terminate(); done(); }, 500);
+        timer.unref();
+        socket.close();
+      });
+      await this.releaseLease();
+    })();
+    return this.closePromise;
   }
 
   releaseLease() {
-    this.lease?.release(); this.lease = null;
+    if (!this.leaseRelease) {
+      const lease = this.lease; this.lease = null;
+      this.leaseRelease = Promise.resolve().then(() => lease?.release());
+    }
+    return this.leaseRelease;
   }
 }
 

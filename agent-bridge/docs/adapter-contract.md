@@ -25,7 +25,7 @@
 
 ## ZCode 的当前实现
 
-当前zcode-worker作为Herdr中的Node交互程序，接收单行任务文件路径，通过Desktop Remote Relay/Host RPC发送V4命令、订阅当前会话并上报自定义zcode身份。Escape转为V4 stop，完成后释放远控连接。直接app-server与独立CLI保留为备选，当前不管理它们的独立认证与Provider。
+当前zcode-worker作为Herdr中的Node交互程序，接收单行任务文件路径，通过Desktop Remote Relay/Host RPC发送V4命令、订阅当前会话并上报自定义zcode身份。Escape仅记录停止请求；锁定V4没有原子command条件stop时拒绝发送会话级stop，完成后释放远控连接。直接app-server与独立CLI保留为备选，当前不管理它们的独立认证与Provider。
 
 适配器使用官方只读共享登录函数，仅在内存取得Relay认证，固定官方域名，连接配置私有保存。命令日志和sourceCommandId控制收口，普通resume按原会话和命令恢复观察，replayOnRelaunch=false防止Pane重建触发自动重投。新适配器可声明resumeInput、readBlocker及readPromptContext，分别恢复观测、读取结构化阻塞和回报实际提示模式；公共协调器继续管理任务状态与验收。
 
@@ -39,14 +39,22 @@ Source server 的远程连接与手机远控是不同入口，不能因为存在
 
 agy通过原生交互CLI运行，与CBC一样保留可见对话、原生审批及人工接管。可选prepareWorker(task,resumeId)在创建位置后、运行CLI前配置项目级Hook，并用官方stream-json初始化核验实际conversation_id；此预检不发送模型任务。其他适配器无需实现该回调。
 
-buildCommand以已核验ID启动原生agy --conversation，普通任务通过Pane发送规格文件指针。Hook记录真实session、任务、轮次与Pane，PreInvocation注入稳定系统规则，Stop核对fullyIdle；通知和验收仍由公共模块处理。恢复不使用--continue，不因连接错误自动重发。replayOnRelaunch=false保留普通恢复的观察语义。详见[接入与验证](../../docs/Antigravity接入与验证.md)。
+buildCommand以已核验ID启动原生agy --conversation，普通任务在Herdr识别真实agy执行端且可交互时通过agent prompt提交规格文件指针；自报身份本身不构成该能力。Hook记录真实session、任务、轮次与Pane，PreInvocation注入稳定系统规则，Stop核对fullyIdle；通知和验收仍由公共模块处理。恢复不使用--continue，不因连接错误自动重发。replayOnRelaunch=false保留普通恢复的观察语义。详见[接入与验证](../../docs/Antigravity接入与验证.md)。
 
 ## OpenCode V2的当前实现
 
 opencode-worker在Pane内启动原生TUI，同进程观察器经官方CLI API核对会话、active、待审批和表单，仅变化时上报Herdr身份与状态。prepareWorker创建或核验真实sessionID，恢复活跃会话时不修改或重放原执行。验收/取消后不继续API轮询。
 
-可选回调保留公共编排：prepareSubmission在提交前更新会话指令及显式模型/权限；submitWorker经官方API提交稳定准入ID和任务指针；cancelWorker请求协议中断并核验；refreshWorker在恢复监听前刷新协议状态，避免旧blocked误收口。未实现回调的旧适配器继续使用原来的终端输入和Escape。会话指令使用experimental持久键，需随上游版本复验；其强度与具体权限边界见[接入说明](../../docs/OpenCode接入与验证.md)。
+可选回调保留公共编排：prepareSubmission在提交前更新会话指令及显式模型/权限；submitWorker经官方API提交稳定准入ID和任务指针；cancelWorker请求协议中断并核验；refreshWorker在恢复监听前刷新协议状态，避免旧blocked误收口。适配器须选择经验证的输入传输；不能对所有自报Agent套用agent prompt，也不能无证明地降级为终端输入或Escape。会话指令使用experimental持久键，需随上游版本复验；其强度与具体权限边界见[接入说明](../../docs/OpenCode接入与验证.md)。
 
-可选cancellationState(task)仅只读核验原生身份与执行是否停止，返回confirmed、reason及可用的outcome；confirmed不能表示业务验收成功。当前仅OC实现，需连续两次无活跃工作、审批和表单的精确会话快照。公共cancellation模块保存取消绑定与一次中断尝试；cancel_pending的recover只对账，Pane缺失不能代替原生证据，也不能阻止已停止任务收口。其他适配器取消流程保持原有实现。
+可选cancellationState(task)仅只读核验原生身份与执行是否停止，返回confirmed、reason及可用的outcome；confirmed不能表示业务验收成功。OC需连续两次无活跃工作、审批、表单和队列输入的精确会话快照；可选authorizePaneLessInterrupt/turnFingerprint仅对当前桥接准入及稳定回合授权有界中断。公共cancellation模块保存绑定、最多三次显式尝试与冷却；recover只对账。CBC/AGY仅支持登记执行端关闭证明，ZCode按精确命令回执证明，未知情况拒绝全局停止。可选inspectAbandonment只提供本地退出与资源隔离依据，不伪造原生终态。
 
 refreshWorker(task, {forSubmission:true})在公共submit的身份检查之后、轮次递增之前核对OC准入资格并刷新投影；普通恢复调用不传该选项。round 0只有完全没有提交证据时才能把原生旧failed投影为可准入，现有审批、活动、租约冲突及不确定准入仍阻止提交。prepareSubmission保存本轮原生终态基线，绑定任务与执行身份；旧failed/idle时间未变时不产生本轮完成或活动证据，新失败仍阻塞。公共submit准备失败时恢复内存中的原轮次及待发任务书；发送开始后的不确定结果仍持久保留，禁止自动重试。旧进程不支持热加载，安全重附着方式见OC说明。
+
+恢复控制由协调器统一提供observe/settle/adopt-restored/abandon。适配器不直接改变技术验收结果；提交对账返回admitted/not_sent/unresolved，只有精确准入证明可更新journal。详细行为见../../docs/异常恢复与资源隔离.md。
+
+## 自报执行端与输入能力
+
+Herdr 0.9.5的agent.prompt在effective_known_agent缺失或启动尚未就绪时，于任何输入前返回agent_not_ready。named/idle不等于该RPC可用。CBC使用专用guarded Pane.run，前后核对native Hook、实际进程/创建时间、租约、唯一所有者及可见界面；ZCode自写readline接收端核对精确wrapper PID及回执后用Pane.run。两者均一次提交文本和Enter，写入回执不是原生接纳或完成。AGY保留真实内置agy标识和独立custom source，避免改成未知label后失去有效原生输入路径；不允许同Pane加载冲突的双集成。
+
+每次提交保存唯一attempt journal。明确发送前拒绝保留原轮次并记录rejected-before-input；write/ACK结果未知保留uncertain，不能force重发。旧CBC原始拒绝用reconcile-submission交叉核实本地证据；需要结束协调时可显式带rejection-receipt的abandon，保留资源隔离且不停止原生会话。

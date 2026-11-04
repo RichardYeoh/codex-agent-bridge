@@ -9,6 +9,13 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bridge-agy-hooks-'));
 process.env.AGENT_BRIDGE_STATE_DIR = root;
 const { ensureHooks, hookDefinition, prepareWorker, KEY } = require('../lib/agy-hooks');
 const { saveTask, taskDir } = require('../lib/util');
+const { writeLease } = require('../lib/worker-lease');
+const herdrStub = path.join(root, 'herdr-pane-stub.cjs');
+fs.writeFileSync(herdrStub, [
+  'process.stdout.write(JSON.stringify({ result: { pane: {',
+  '  pane_id: process.env.HARK_HOOK_PANE_ID, terminal_id: process.env.HARK_HOOK_TERMINAL_ID,',
+  '} } }));',
+].join('\n'));
 test.after(() => fs.rmSync(root, { recursive: true, force: true }));
 
 test('project Hook installation preserves unrelated definitions and refuses edited owned configuration', () => {
@@ -43,12 +50,15 @@ test('preflight verifies the native ID without submitting a model prompt', async
 
 test('native Hooks inject policy once, preserve approvals and distinguish background work', () => {
   const task = { id: 'agy-hook-test', agent: 'agy', stateDir: root, paneId: 'w1:p7', herdrSession: 'test-service',
-    workerSessionId: 'native-conversation', round: 1, history: [], workerPolicySha256: 'test-policy' };
+    terminalId: 'agy-terminal-7', workerSessionId: 'native-conversation', workerStartedAt: new Date().toISOString(),
+    round: 1, history: [], workerPolicySha256: 'test-policy' };
   task.workerPolicyPath = path.join(taskDir(task.id), 'worker-policy.md'); saveTask(task);
+  writeLease(task);
   fs.writeFileSync(task.workerPolicyPath, 'Test policy / 测试规则');
   const invoke = (name, payload = {}) => {
     const r = spawnSync(process.execPath, [path.join(__dirname, '../hooks/herdr-agy.js'), name], { encoding: 'utf8',
-      env: { ...process.env, HERDR_ENV: '1', HERDR_PANE_ID: task.paneId, HERDR_BIN_PATH: 'never-executed-in-dry-run',
+      env: { ...process.env, HERDR_ENV: '1', HERDR_PANE_ID: task.paneId, HERDR_BIN_PATH: herdrStub,
+        HARK_HOOK_PANE_ID: task.paneId, HARK_HOOK_TERMINAL_ID: task.terminalId,
         AGENT_BRIDGE_HERDR_SESSION: task.herdrSession, AGENT_BRIDGE_TASK_ID: task.id, AGENT_BRIDGE_HOOK_DRY_RUN: '1' },
       input: JSON.stringify({ conversationId: task.workerSessionId, ...payload }) });
     assert.equal(r.status, 0); return JSON.parse(r.stdout);
@@ -63,4 +73,26 @@ test('native Hooks inject policy once, preserve approvals and distinguish backgr
   assert.equal(invoke('Stop', { fullyIdle: false }).dryRun.state, 'blocked');
   assert.equal(invoke('Stop', { fullyIdle: true }).dryRun.state, 'idle');
   assert.equal(invoke('Stop', { fullyIdle: true, error: 'quota exhausted' }).dryRun.state, 'blocked');
+});
+
+test('AGY Hook fails closed when native ID and live terminal exist but the task has no lease proof', () => {
+  const task = { id: 'agy-hook-no-lease', agent: 'agy', stateDir: root, paneId: 'w1:p9',
+    terminalId: 'agy-terminal-9', herdrSession: 'test-service', workerSessionId: 'native-unleased-conversation',
+    workerStartedAt: new Date().toISOString(), round: 1, history: [], workerPolicySha256: 'test-policy' };
+  task.workerPolicyPath = path.join(taskDir(task.id), 'worker-policy.md'); saveTask(task);
+  fs.writeFileSync(task.workerPolicyPath, 'Must not inject without lease / 缺少租约时不得注入');
+  const hookEvents = path.join(root, 'hook-events.ndjson');
+  const before = fs.existsSync(hookEvents) ? fs.readFileSync(hookEvents, 'utf8') : '';
+  const result = spawnSync(process.execPath, [path.join(__dirname, '../hooks/herdr-agy.js'), 'PreInvocation'], {
+    encoding: 'utf8', env: { ...process.env, HERDR_ENV: '1', HERDR_PANE_ID: task.paneId,
+      HERDR_BIN_PATH: herdrStub, HARK_HOOK_PANE_ID: task.paneId, HARK_HOOK_TERMINAL_ID: task.terminalId,
+      AGENT_BRIDGE_HERDR_SESSION: task.herdrSession, AGENT_BRIDGE_TASK_ID: task.id,
+      AGENT_BRIDGE_HOOK_DRY_RUN: '1' },
+    input: JSON.stringify({ conversationId: task.workerSessionId }),
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(JSON.parse(result.stdout), {});
+  assert.equal(fs.existsSync(hookEvents) ? fs.readFileSync(hookEvents, 'utf8') : '', before);
+  assert.equal(fs.existsSync(path.join(taskDir(task.id), 'agy-state.json')), false);
+  assert.equal(fs.existsSync(path.join(taskDir(task.id), 'agy-policy-receipts')), false);
 });

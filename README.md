@@ -4,11 +4,17 @@
 
 当前版本：0.5.0。CBC要求Node.js 20及以上；ZCode执行端使用Node.js 24及以上、已登录并启用远控的ZCode Desktop。运行环境保持原生Windows、PowerShell与Herdr。公开源码不包含认证配置或本机原始会话。
 
-CBC 2.179.2的DeepSeek 1M窗口已通过显式载入[窗口预设](agent-bridge/examples/cbc-context-1m.json)的真实TUI及短请求验证。2026-11-03检查发现本机cbc三个入口的参数注入已失效，普通cbc及桥接默认启动不能保证1M；桥接自身尚未直接传入该预设。安装、检查、恢复及npm升级边界见[CBC窗口验证说明](docs/CBC上下文窗口设置与验证.md)；新机器不会因克隆仓库自动改动全局入口。
+CBC 2.179.2的DeepSeek 1M窗口已通过显式载入[窗口预设](agent-bridge/examples/cbc-context-1m.json)的真实TUI及短请求验证。2026-11-03检查发现本机cbc三个入口的参数注入已失效，普通cbc不保证1M；本轮整改已让桥接buildCommand显式传入该预设，新启动不再依赖入口注入。此变更经命令构造回归，未重启现有CBC或重做真实百万token压力验证。安装、检查、恢复及npm升级边界见[CBC窗口验证说明](docs/CBC上下文窗口设置与验证.md)；新机器不会因克隆仓库自动改动全局入口。
 
-GitHub仓库：[RichardYeoh/codex-agent-bridge](https://github.com/RichardYeoh/codex-agent-bridge)。验证工作流使用Windows运行器，执行自动回归和交付验收。
+GitHub仓库：[RichardYeoh/codex-agent-bridge](https://github.com/RichardYeoh/codex-agent-bridge)。验证工作流在Windows执行完整回归和交付验收，另设Ubuntu纯逻辑与进程锁检查；新增CI任务尚未远端运行，不能代替Windows原生执行端实测。
 
-发布前运行`npm run check:publication`检查已跟踪及未忽略的新文件，暂存后运行`node tools/check-publication.cjs --staged`检查实际提交内容。本机状态、认证配置、原生会话身份、依赖、归档及临时输出不得入库；`.local`中的证据仅在维护机器保留。当前CBC默认1M入口失效及ZCode执行恢复尚未真实补验的限制随源码保留，不以隔离回归替代业务恢复证明。
+发布前运行`npm run check:publication`检查已跟踪及未忽略的新文件，暂存后运行`node tools/check-publication.cjs --staged`检查实际提交内容。本机状态、认证配置、原生会话身份、依赖、归档及临时输出不得入库；`.local`中的证据仅在维护机器保留。普通CBC入口与ZCode恢复的真实环境限制随源码保留，不以隔离回归替代业务恢复证明。
+
+CBC首次启动前失败且未创建原生会话时，使用[启动前失败恢复流程](docs/CBC启动前失败恢复.md)，经证据核对取消旧派工申请，再按原绑定首次dispatch；无需恢复不存在的会话ID。
+
+本次Hark整改与复审范围见[47项整改表](hark_yotta_review/整改结果.md)，正式恢复入口见[异常恢复与资源隔离](docs/异常恢复与资源隔离.md)。已提交任务不因resume/force重投；明确未发送与当前原生空闲分别举证。
+
+CBC专项维护采用精确原生输入与Stop证明，修复回执丢失后的自动只读对账、旧idle快照误结算及进程读取短暂失败。实机与模拟验证分别记录于[CBC专项复审说明](hark_yotta_review/CBC专项复审说明.md)。[社区与官方接口调查](docs/Herdr社区与CBC接口评估.md)尚未发现可直接替代当前交互与验收流程的完整方案，未安装或迁移到其他平台。
 
 ## 安装
 
@@ -110,3 +116,7 @@ OC新任务在round 0、尚未提交时，不再因原生会话上一轮failed�
 用户已取消本次接入。官方Tunnel客户端、安装包、启动绑定及采集配置/状态已移入.local/archives/YDOT-BRIDGE-CLEANUP-20261031-C1；约91.98 MiB可恢复保留，未永久删除。父项目三项观察Hook已精确移除，用户通过/hooks处理后，官方原会话运行清单确认0项；底层信任记录未清理。旧启动入口因活动绑定缺失而失败关闭，不自动查找归档。
 
 事件桥接源码、测试、文档及历史校验/验收证据保留；既有Agent派工与队列RPC不变，不新增远程shell或审批工具。清理仅做两项精确回滚回归，2/2通过，归档摘要逐项一致，未重跑无关全量。详细结果、恢复清单和自然Stop后续观察边界见[操作清单第9节](docs/YDot安全接入操作清单.md#9-c1取消接入与可恢复清理)。旧安装和密钥输入说明为历史方案，不能继续执行。
+
+## Hark审核整改恢复入口
+
+已提交轮次的resume（包括force）不会重投任务；OC明确失败可显式resume --retry-failed，迟到交付使用settle，原生会话移动或服务恢复后使用adopt-restored。未知终态可保留资源隔离地abandon，不能假称cancelled。命令和证据要求见[异常恢复与资源隔离](docs/异常恢复与资源隔离.md)，全部审核条目和验证结果见[整改结果](hark_yotta_review/整改结果.md)。

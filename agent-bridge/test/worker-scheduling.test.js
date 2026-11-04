@@ -20,7 +20,7 @@ test('explicit parallel delegates have distinct contexts and disjoint write scop
   const active = Array.from({ length: 5 }, (_, i) => task(`module-${i}`, `module-${i}`, { parallel: true }));
   for (let i = 0; i < active.length; i++) assert.doesNotThrow(() => assertSingleActive(active[i], active.slice(0, i)));
   assert.throws(() => assertSingleActive(task('extra', 'module-0', { parallel: true }), active), /occupied/);
-  assert.throws(() => assertSingleActive(task('extra', 'separate', { parallel: true, allowedWritePaths: ['src'] }), active), /overlaps/);
+  assert.throws(() => assertSingleActive(task('extra', 'separate', { parallel: true, allowedWritePaths: ['src'] }), active), /write scope/);
   assert.throws(() => assertSingleActive(task('extra', 'separate', { parallel: true, allowedWritePaths: ['src/*.js'] }), active), /globs/);
 });
 test('a pending review owns its context until acceptance or cancellation', () => {
@@ -30,5 +30,5 @@ test('a pending review owns its context until acceptance or cancellation', () =>
 });
 test('shared Desktop relay seats cannot be used by simultaneous ZCode delegates', () => {
   const common = { parallel: true, agent: 'zcode', zcodeBindingSha256: 'same-host' };
-  assert.throws(() => assertSingleActive(task('next', 'next', common), [task('first', 'first', common)]), /one terminal/);
+  assert.throws(() => assertSingleActive(task('next', 'next', common), [task('first', 'first', common)]), /ZCode Desktop relay/);
 });

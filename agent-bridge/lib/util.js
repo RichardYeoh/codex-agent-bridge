@@ -15,14 +15,18 @@ function homePath(...parts) {
 }
 
 function config() {
+  const home = process.env.USERPROFILE || require('node:os').homedir();
+  const local = process.env.LOCALAPPDATA || path.join(home, process.platform === 'win32' ? 'AppData/Local' : '.local/share');
+  const roaming = process.env.APPDATA || path.join(home, process.platform === 'win32' ? 'AppData/Roaming' : '.config');
   return {
     root: ROOT,
-    herdr: process.env.HERDR_BIN_PATH || path.join(process.env.LOCALAPPDATA, 'Programs', 'Herdr', 'bin', 'herdr.exe'),
-    cbc: process.env.AGENT_BRIDGE_CBC || path.join(process.env.APPDATA, 'npm', 'cbc.cmd'),
-    agy: process.env.AGENT_BRIDGE_AGY || path.join(process.env.LOCALAPPDATA, 'agy', 'bin', 'agy.exe'),
-    opencode: process.env.AGENT_BRIDGE_OPENCODE || path.join(process.env.APPDATA, 'npm', 'node_modules', '@opencode', 'cli', 'bin', 'opencode.exe'),
-    codexJs: process.env.AGENT_BRIDGE_CODEX_JS || path.join(process.env.APPDATA, 'npm', 'node_modules', '@openai', 'codex', 'bin', 'codex.js'),
-    stateDir: process.env.AGENT_BRIDGE_STATE_DIR || path.join(process.env.LOCALAPPDATA, 'agent-bridge'),
+    herdr: process.env.HERDR_BIN_PATH || (process.platform === 'win32' ? path.join(local, 'Programs', 'Herdr', 'bin', 'herdr.exe') : 'herdr'),
+    cbc: process.env.AGENT_BRIDGE_CBC || (process.platform === 'win32' ? path.join(roaming, 'npm', 'cbc.cmd') : 'cbc'),
+    cbcNative: process.env.AGENT_BRIDGE_CBC_NATIVE || (process.platform === 'win32' ? path.join(roaming, 'npm', 'cbc.cmd') : 'cbc'),
+    agy: process.env.AGENT_BRIDGE_AGY || (process.platform === 'win32' ? path.join(local, 'agy', 'bin', 'agy.exe') : 'agy'),
+    opencode: process.env.AGENT_BRIDGE_OPENCODE || (process.platform === 'win32' ? path.join(roaming, 'npm', 'node_modules', '@opencode', 'cli', 'bin', 'opencode.exe') : 'opencode'),
+    codexJs: process.env.AGENT_BRIDGE_CODEX_JS || path.join(roaming, 'npm', 'node_modules', '@openai', 'codex', 'bin', 'codex.js'),
+    stateDir: process.env.AGENT_BRIDGE_STATE_DIR || path.join(local, 'agent-bridge'),
     defaultSession: process.env.HERDR_SESSION || 'default',
     defaultPermissionMode: process.env.AGENT_BRIDGE_PERMISSION_MODE || 'acceptEdits',
   };
@@ -85,27 +89,30 @@ async function withLock(name, operation, timeoutMs = 180000) {
   if (!/^[a-z][a-z0-9-]{2,63}$/.test(name)) throw new Error(`Invalid lock name: ${name}`);
   const lock = path.join(lockRoot, `${name}.lock`);
   const owner = path.join(lock, 'owner.json');
-  const deadline = Date.now() + timeoutMs;
-  for (;;) {
-    try {
-      fs.mkdirSync(lock);
-      fs.writeFileSync(owner, JSON.stringify({ pid: process.pid, createdAt: now() }));
-      break;
-    } catch (error) {
-      if (error.code !== 'EEXIST') throw error;
+  const release = await require('./process-lock').acquire(path.join(lockRoot, name), timeoutMs);
+  const token = crypto.randomUUID(), deadline = Date.now() + timeoutMs;
+  try {
+    while (fs.existsSync(lock)) {
       const prior = readJson(owner, null);
-      // Recover abandoned locks; allow time to publish ownership. / 回收失效锁，保留所有者写入窗口。
-      if ((prior && !processAlive(prior.pid))
-          || (!prior && Date.now() - fs.statSync(lock).mtimeMs > 10000)) {
-        try { fs.rmSync(lock, { recursive: true }); } catch {}
-        continue;
+      // Native ownership serializes reclamation, independently of PID reuse. / 原生锁串行回收，不依赖PID是否被复用。
+      if (prior?.protocol === 2 || prior && !processAlive(prior.pid)
+          || !prior && Date.now() - fs.statSync(lock).mtimeMs > 10000) {
+        if (fs.readdirSync(lock).some(file => file !== 'owner.json')) throw new Error('Lock directory has unrecognized content');
+        if (fs.existsSync(owner)) fs.unlinkSync(owner);
+        fs.rmdirSync(lock); break;
       }
-      if (Date.now() >= deadline) throw new Error(`Timed out acquiring lock: ${name}`);
+      if (Date.now() >= deadline) throw new Error(`Timed out acquiring legacy lock: ${name}`);
       await sleep(50);
     }
+    fs.mkdirSync(lock);
+    fs.writeFileSync(owner, JSON.stringify({ protocol: 2, pid: process.pid, token, createdAt: now() }), { flag: 'wx' });
+    return await operation();
+  } finally {
+    try {
+      const current = readJson(owner, null);
+      if (current?.token === token) { fs.unlinkSync(owner); fs.rmdirSync(lock); }
+    } finally { await release(); }
   }
-  try { return await operation(); }
-  finally { fs.rmSync(lock, { recursive: true, force: true }); }
 }
 
 function appendJsonl(file, value) {

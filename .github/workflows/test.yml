@@ -16,3 +16,13 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm test
       - run: npm run test:e2e
+  portable-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node --test agent-bridge/test/util.test.js agent-bridge/test/worker-policy.test.js agent-bridge/test/worker-context.test.js agent-bridge/test/worker-scheduling.test.js agent-bridge/test/hark-process-lock.test.js agent-bridge/test/hark-core-safety.test.js

@@ -1,0 +1,610 @@
+{
+  "schema": 1,
+  "scope": "Publication snapshot: SHA-256 of Git index bytes (LF), not historical local CRLF bytes",
+  "generatedAt": "2026-11-04T13:10:59.044Z",
+  "historicalManifest": "复审源码清单.json",
+  "aggregateEncoding": "SHA-256 of UTF-8 JSON.stringify(files)",
+  "aggregateSha256": "f73e518df9510781373e008c5894b103a6458f3a3cfef2ce824eb82b3e81c471",
+  "files": [
+    {
+      "path": ".github/workflows/test.yml",
+      "sha256": "baa40f23d2f8f78687320fa3d12d9d0ec081d0ccd72dae3989b449f3ef2abbe0"
+    },
+    {
+      "path": "agent-bridge/bin/agent-bridge-watcher.js",
+      "sha256": "25aed28fa50e4988db54474adc4346e2bdc07fa0cfe46d308786394ef03f03a3"
+    },
+    {
+      "path": "agent-bridge/bin/agent-bridge.js",
+      "sha256": "0047e07e8f9ff4abf8a5334a907b97b560f690016b7913d10c6f9ca0cad6fba6"
+    },
+    {
+      "path": "agent-bridge/bin/codex-events.js",
+      "sha256": "dca70b786f3ccc7967799bff417fee70de50a4c79f69ca30dc8da05a344e1840"
+    },
+    {
+      "path": "agent-bridge/bin/opencode-worker.js",
+      "sha256": "317306317e4d351836a5d38ab4629d82d2cbc8f0f85d54aa3790806ad56a4baa"
+    },
+    {
+      "path": "agent-bridge/bin/resume-worker.js",
+      "sha256": "2579b87f8b2991ae19fbfe8036c2b4691cd6166275361e2e176c9cfdafe28e53"
+    },
+    {
+      "path": "agent-bridge/bin/zcode-control.js",
+      "sha256": "c7a5044b39410a5df95a8deb2c39806765d5202b834c922dd8f134a79baac331"
+    },
+    {
+      "path": "agent-bridge/bin/zcode-worker.js",
+      "sha256": "1c2980d5ec75ec570016a2f68bd9f582e1538e431fbea11a8b6d0076367d46ab"
+    },
+    {
+      "path": "agent-bridge/hooks/codex-events.js",
+      "sha256": "0f1d6a62cba81e76ab9784cbc87ba0b7cc36075bc0667b929fd5842c0b8cf66d"
+    },
+    {
+      "path": "agent-bridge/hooks/herdr-agy.js",
+      "sha256": "0f82006e1b5dfd8525732325f990f51bcd72cc07d0ec590e34b37f2ee0a3f858"
+    },
+    {
+      "path": "agent-bridge/hooks/herdr-binding.js",
+      "sha256": "58383f4e927350cdc835d0d2e3bc5f4f2e1ce6d3e49495e47ff522af738c8c03"
+    },
+    {
+      "path": "agent-bridge/hooks/herdr-codebuddy.js",
+      "sha256": "ad711747191c82276d842debdd24a0e874be5bba1b589eb4f742a3a8396af91f"
+    },
+    {
+      "path": "agent-bridge/hooks/herdr-resume.js",
+      "sha256": "9e6cdf67b7021661ea0a917b3c6f422c12402a214c58ccbf8c8b808c4b7252fb"
+    },
+    {
+      "path": "agent-bridge/lib/agents.js",
+      "sha256": "de0bb817a57183b429e72872b3019c66e850fdc70348e0d86b1fdab0023dc854"
+    },
+    {
+      "path": "agent-bridge/lib/agy-client.js",
+      "sha256": "40cc652c9cb503618affdd89da4c132e0545763116bb2dca6e843e87bf1be271"
+    },
+    {
+      "path": "agent-bridge/lib/agy-hooks.js",
+      "sha256": "3dd022885fb0b3069f1b828b00b9777cd9e44ca0844f5588432f3a846b2e6537"
+    },
+    {
+      "path": "agent-bridge/lib/blocker.js",
+      "sha256": "7799c57067c28ec2bab3a9da3ef15b4a898dd735a695a2bb6811a26f65f9c8b1"
+    },
+    {
+      "path": "agent-bridge/lib/cancellation.js",
+      "sha256": "6bb16ee4d60c7c21bd2b5d7290df08860b0c29061f4b4b691accdf5fe5d40009"
+    },
+    {
+      "path": "agent-bridge/lib/cbc-evidence-cache.js",
+      "sha256": "b30859d8cdb26a55bcd4a0346386c625bf86b5b5e1a41ee81a0b45a6731179dd"
+    },
+    {
+      "path": "agent-bridge/lib/cbc-observation.js",
+      "sha256": "d162e3e8dabb4f3055fff91b9fa9c169838c9042bbde15978fba93d6369412fd"
+    },
+    {
+      "path": "agent-bridge/lib/cbc-prompt.js",
+      "sha256": "2af27d4fa688d9711081a5506beac6a32dcc68dcd79428c5fc06b540eb614674"
+    },
+    {
+      "path": "agent-bridge/lib/cbc-reconciliation.js",
+      "sha256": "e4d1e8bcfacee47d076c448a8bef8d2bcd882b788451ec8268487db38e4fba36"
+    },
+    {
+      "path": "agent-bridge/lib/cbc-turn.js",
+      "sha256": "e5c96934cb229d55dd7baf356c753665b93239305a06c3112f18e2b0690b82e3"
+    },
+    {
+      "path": "agent-bridge/lib/codex-client.js",
+      "sha256": "add5d666557f02991d4d5b236112891dc49a2cf25da9a9616ce51004d76be735"
+    },
+    {
+      "path": "agent-bridge/lib/coordination-exit.js",
+      "sha256": "44051338a87f3c6fd455b2d6b200ee45fa210250db1baacdcf80c42b9bbdb711"
+    },
+    {
+      "path": "agent-bridge/lib/events/hook-config.js",
+      "sha256": "ce659bb4350cac9ce50725d81c5e68385080a5b2cd8ba680e9b06e6a845370f5"
+    },
+    {
+      "path": "agent-bridge/lib/events/server.js",
+      "sha256": "90ef48924e7c59b0ec9e7d842e53c43b343a7b59473cacc22e8ca954c8f28e57"
+    },
+    {
+      "path": "agent-bridge/lib/events/service.js",
+      "sha256": "b628aab44504045e2cce1c221bc0ba902fb5378dfeb4a71c53922f473b027900"
+    },
+    {
+      "path": "agent-bridge/lib/events/store.js",
+      "sha256": "538bf59297eb0abcb062cfa425a7cbbe46d81e1932ba4bb6fa9d89910802a02f"
+    },
+    {
+      "path": "agent-bridge/lib/events/webhook.js",
+      "sha256": "ce7a41a42bce2b47cec44a0a956fb7b749a82314180ee7956d92b572d5b85a59"
+    },
+    {
+      "path": "agent-bridge/lib/herdr.js",
+      "sha256": "9f64eca6c3ffe7c63801eee83b4e79a414d260694685ffde76a9b7659a22c68d"
+    },
+    {
+      "path": "agent-bridge/lib/location.js",
+      "sha256": "b45b0a10b1a42d1c20f3580f0ae562c77657ff4fc4c5cc27089191ffcf803899"
+    },
+    {
+      "path": "agent-bridge/lib/messages.js",
+      "sha256": "f89659dc43476486b73e7232b30e543e67d92334b0f49d2f94c3f075cff77822"
+    },
+    {
+      "path": "agent-bridge/lib/notification-control.js",
+      "sha256": "560d80df279dae1f25716928822d73ee6d4bf42df2bc752e6a29770d017de486"
+    },
+    {
+      "path": "agent-bridge/lib/notify.js",
+      "sha256": "d18bacf5f257fd4181b317a6f90a78b8387a49d5564ed72820de469a77417178"
+    },
+    {
+      "path": "agent-bridge/lib/opencode.js",
+      "sha256": "33b272f482b7e8bf824adb884ee2037abe67700a38f48ae94207f20a3bfc5ef7"
+    },
+    {
+      "path": "agent-bridge/lib/pane-cancellation.js",
+      "sha256": "505800b1addb8c022f766cc26e0f889409e733594379adb16f478d566569b7df"
+    },
+    {
+      "path": "agent-bridge/lib/process-lock.js",
+      "sha256": "2e9833a34d60c795a1733d3d1f17792ce1e9de13357e1c41a0bbe94d1b43649b"
+    },
+    {
+      "path": "agent-bridge/lib/startup-recovery.js",
+      "sha256": "2fc1e19021e466c7cb2e3f93256b7df461c138bb367975d2fe66075e4c81c6df"
+    },
+    {
+      "path": "agent-bridge/lib/submission-attempt.js",
+      "sha256": "bc66b3aded8481148a4d57b4d84ac495d941022ba37f67e527806732f28a2d1e"
+    },
+    {
+      "path": "agent-bridge/lib/submission-rejection.js",
+      "sha256": "8100471de63e3262e61085a73d588b947a0b68af409610283286dd1c74a51d84"
+    },
+    {
+      "path": "agent-bridge/lib/task-recovery.js",
+      "sha256": "17967c46c36aeb1a85ed1ddca562b7578c2898d00e0f11465e3d0a19d9a06d41"
+    },
+    {
+      "path": "agent-bridge/lib/util.js",
+      "sha256": "dbd369f0b49081ad101fea3cd4416c908953c4ee40c406da9407f20b4c8496ea"
+    },
+    {
+      "path": "agent-bridge/lib/windows-worker-process.js",
+      "sha256": "48d67b76532b66aeaa8a76545907e9926f916b3503e9a95c37bcac9472c07b2a"
+    },
+    {
+      "path": "agent-bridge/lib/worker-binding.js",
+      "sha256": "3c307d17311ceedad646dcef7753fb3f9856da319849ad9d6faa9046098d0c3c"
+    },
+    {
+      "path": "agent-bridge/lib/worker-context.js",
+      "sha256": "bbacb104e80268c91b2754c9ecb3e4ff320a20a3a7fde45eaeb3098bf0bf15fb"
+    },
+    {
+      "path": "agent-bridge/lib/worker-identity.js",
+      "sha256": "afe33662b9ce5ac9439f8d4f6fce5c8e22ba9f0e1da884d143dcf86511bc9af4"
+    },
+    {
+      "path": "agent-bridge/lib/worker-lease.js",
+      "sha256": "50b1040018c4805420df3a792012d80cbb98b078f59ad1e04b2ef34a3d59faf8"
+    },
+    {
+      "path": "agent-bridge/lib/worker-policy.js",
+      "sha256": "f4d4e378b333b505ffd8d32ac46869d104955a311bd2d7322058dd4069e51b33"
+    },
+    {
+      "path": "agent-bridge/lib/worker-scheduling.js",
+      "sha256": "b90d8ab2db4a98907946aab76609c9f5350aefb40d4b1869dd5e11b92f189a5b"
+    },
+    {
+      "path": "agent-bridge/lib/worker.js",
+      "sha256": "2e4c6087fa0381b993bb636927eed4d18bb93680dd5e60112ce71dc960aa23f5"
+    },
+    {
+      "path": "agent-bridge/lib/zcode-adoption.js",
+      "sha256": "e0d11ce0b5e6bb87bac941e12498e90a7a3440325224dfc5cea11156019f7176"
+    },
+    {
+      "path": "agent-bridge/lib/zcode-cancellation.js",
+      "sha256": "a407f1f3e0b3b6b5c852e518fa1808ef7c099e75006568bff670efffe0280fe1"
+    },
+    {
+      "path": "agent-bridge/lib/zcode-errors.js",
+      "sha256": "5c457d6ccd06140234844b1dedfc23de4d604777a7f383f60b2a2edd5b07af90"
+    },
+    {
+      "path": "agent-bridge/lib/zcode-observation.js",
+      "sha256": "15335960824ce1f508929d709837f9af3f46d62c5b6b87dfbc38b7b64b25c822"
+    },
+    {
+      "path": "agent-bridge/lib/zcode-prompt.js",
+      "sha256": "346cfa9fb4115e9eb19cc9d490d7a95435872c8964731499cd89df4d73269e27"
+    },
+    {
+      "path": "agent-bridge/lib/zcode-readiness.js",
+      "sha256": "0ffc7aaf4c41fa36097205b2b37235df759434b78ef50385f3ac52417ed4ae9f"
+    },
+    {
+      "path": "agent-bridge/lib/zcode-rebinding.js",
+      "sha256": "1b45ed153fc4b06c58f9aa2154f8b3cc92d934a3110709d49d390239bfabe2f5"
+    },
+    {
+      "path": "agent-bridge/lib/zcode-relay-lease.js",
+      "sha256": "153f233816f62ea75a0210ba52772ba6980ebe8f8e9f7b810bd216d214b1bfda"
+    },
+    {
+      "path": "agent-bridge/lib/zcode-remote.js",
+      "sha256": "e9fb2ed98fc5ba77ae1fe3e238e70d82a44e114b0107fb1023d242ec1b977d77"
+    },
+    {
+      "path": "agent-bridge/lib/zcode-settlement.js",
+      "sha256": "e71cbf160b0150d1c577a2916d0e902ebd16db63c51380d00ac1d00962c08f33"
+    },
+    {
+      "path": "agent-bridge/package.json",
+      "sha256": "50491476724306ce5f6a222e2e3ee45b11766b67fd54ebb234f4c046316bc9e8"
+    },
+    {
+      "path": "agent-bridge/scripts/install.js",
+      "sha256": "11260aaf56d47ed59619d6df4339068af8a4c84c121c8d80e7ca90d25a06bc72"
+    },
+    {
+      "path": "agent-bridge/skills/delegate-worker/SKILL.md",
+      "sha256": "aee9d14ed107ab0afadda8d39182d45d1fe746fc4790526099502472f09bc9e2"
+    },
+    {
+      "path": "agent-bridge/skills/delegate-worker/agents/openai.yaml",
+      "sha256": "1dea768f78f9d8553cba873e2918f7fc5130e959d1f4cb5b11a505707b85e939"
+    },
+    {
+      "path": "agent-bridge/skills/delegate-worker/references/agy-cli.md",
+      "sha256": "1e3ccc41e4273cc006bf451a9605f3240dee00859706b867beeea3489dde90e3"
+    },
+    {
+      "path": "agent-bridge/skills/delegate-worker/references/executor-permissions.md",
+      "sha256": "4bb5992caa29d4912afb078c3a47492bb3f0fba732e25877b5a150b0604373b6"
+    },
+    {
+      "path": "agent-bridge/skills/delegate-worker/references/opencode-cli.md",
+      "sha256": "6c3e7c60eda20a0102f6150773dc60bf6b69f9f7b4e5487c5b50ee75216c3abb"
+    },
+    {
+      "path": "agent-bridge/skills/delegate-worker/references/recovery-safety.md",
+      "sha256": "8d1f4486029dc2ff719d26f11b853f6f7d5e1b90b04cd9c979e5cf56e3ee72c7"
+    },
+    {
+      "path": "agent-bridge/skills/delegate-worker/references/task-brief-template.md",
+      "sha256": "08ce0677177fd5abefd9f647fa7508e6ae34406d075d180fca3f1e2a96714e24"
+    },
+    {
+      "path": "agent-bridge/skills/delegate-worker/references/zcode-desktop.md",
+      "sha256": "a01c7b565ce7852ecf3bb47c5d46c6ab73f2d841fe3e1621e77ff2a12c8f2040"
+    },
+    {
+      "path": "agent-bridge/test/agents.test.js",
+      "sha256": "db8449b1f55b24883e1d9526dc0469669c781bb1757cc93994595d89f8f75521"
+    },
+    {
+      "path": "agent-bridge/test/agy-client.test.js",
+      "sha256": "8fdf53862b3d7f4ae256036695c0632d715e7a5a4fe8150bb6400046d9755e04"
+    },
+    {
+      "path": "agent-bridge/test/agy-hooks.test.js",
+      "sha256": "118e5596d1ccbb30724a0ab9c4a370722af8f059aae0dcdd72c32dc2f3abe8df"
+    },
+    {
+      "path": "agent-bridge/test/cancellation.test.js",
+      "sha256": "fbe6a4ecc468dcc6b767a440b8536d5088d22ed34370f76baabda887b93e2096"
+    },
+    {
+      "path": "agent-bridge/test/cbc-absence.test.js",
+      "sha256": "c08f040a1d0d0c52ebe272b65ff737064579b805c3905eea3cd9a4ac163286f1"
+    },
+    {
+      "path": "agent-bridge/test/cbc-context-launcher.test.js",
+      "sha256": "3b7efd4170f304856885637b1a3c591247375c83c4ec55de6a0b06b78b9c33a5"
+    },
+    {
+      "path": "agent-bridge/test/cbc-evidence-cache.test.js",
+      "sha256": "fab2ff9fb4c469e722c143ad8eaa0615f0bad4c4cde5629546bd4a71db68074b"
+    },
+    {
+      "path": "agent-bridge/test/cbc-observation.test.js",
+      "sha256": "be58858b713bc16dbe7d24d5707493410db8c03216840ade81a0031ee127c67a"
+    },
+    {
+      "path": "agent-bridge/test/cbc-recovery-paths.test.js",
+      "sha256": "30bd9f948aeb0babbaeb3b4b7350608ff005eeadc852cf24985dc13029c2ac1a"
+    },
+    {
+      "path": "agent-bridge/test/cbc-terminal-context.test.js",
+      "sha256": "6ffcd6b2e817576bd62e1fc3b6a7a8f524ff5289d12a68a2610a825155848761"
+    },
+    {
+      "path": "agent-bridge/test/cbc-turn.test.js",
+      "sha256": "43f29999beb86f28be32d18a8f672977e4e9764009a35ab8155486bcbbb96d10"
+    },
+    {
+      "path": "agent-bridge/test/cbc-watcher.test.js",
+      "sha256": "450711f9345255c796a92c9702430facd85d2661f23378cd120a15deb654b7cd"
+    },
+    {
+      "path": "agent-bridge/test/codex-client.test.js",
+      "sha256": "12446b926d37943e56c4fdc8ce5db4f514ff09e0556887f9eeff623c01685eb0"
+    },
+    {
+      "path": "agent-bridge/test/events.test.js",
+      "sha256": "7a32e3b6d9eea47ba0ab6e6f6494a4e8ec1ca07eddd75e5088c0e54ea4aa199f"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/agy-stub.cjs",
+      "sha256": "32c74244703adffd02e2e6791555a237d984d10a5d3dcabe28f9132d834ef975"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/cbc-terminal-preload.cjs",
+      "sha256": "0ad4f25912ce3aa001b5abc243cdc5c60808c6f2c862fa84a89a0802ff53ffd5"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/codex-stub.cjs",
+      "sha256": "1a1bd5d4436d648799ac323c3f93fc1ffb7ebd2b755f7e162def8f7cb9bad87f"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/hark-coordinator-recovery-preload.cjs",
+      "sha256": "5012cf0cdce383def94b7e320fddcaa57d259cf644531b1b6c9934b5b0192440"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/herdr-cbc-095-metadata.json",
+      "sha256": "bafef8fbbf6346524c31305e511b356b8c248f87845109b1a394826ce500aee4"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/herdr-stub.cjs",
+      "sha256": "aad79204183087425e252c67d6286c9eaa875fe1aba6508b93d1c20e5f2d5867"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/opencode-admission-preload.cjs",
+      "sha256": "d2a536b43c10e17531a5065f10f68b004b86d9195eee93123d2150ad08463d09"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/queue-client.cjs",
+      "sha256": "85f97e1e5c71893664633505f401c2efc84e1317263d8b0e72ffc1d09dce5b16"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/startup-preload.cjs",
+      "sha256": "3d39ccb2ec4539a9ca49a229d333f2f2800c935a4415e8c4f7719b751e39b0e3"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/zcode-preload.cjs",
+      "sha256": "8eaade7ed576a6f65e015a3518c1365649fa73599303e62431c5dfa4c5066222"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/zcode-readiness-preload.cjs",
+      "sha256": "31db09ab12c01fcde068ff4c67971ccca0df08ed1bf8f744beef388865024357"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/zcode-snapshot.json",
+      "sha256": "5eb9ae7ffc14ae4954e7fc3201bade2cc399e931806babb1864775ee9e96eef2"
+    },
+    {
+      "path": "agent-bridge/test/hark-cbc-prompt.test.js",
+      "sha256": "9f05df59185cf95cf48d72feec1e88619261bf7290b2bd1438448b36a83a78fe"
+    },
+    {
+      "path": "agent-bridge/test/hark-cbc-reconciliation.test.js",
+      "sha256": "96087117744bb0b85a5fc263f681272c3410aff0ae3642635407ef462c9a741b"
+    },
+    {
+      "path": "agent-bridge/test/hark-coordinator-recovery.test.js",
+      "sha256": "633fb31e5ce2e4106de457bf189b675bc6fa3013f36722e36a08842c17577504"
+    },
+    {
+      "path": "agent-bridge/test/hark-core-safety.test.js",
+      "sha256": "f720493fb4d8378753fd09957aa639b3a91d32c342d80b95ee2766e2665895ce"
+    },
+    {
+      "path": "agent-bridge/test/hark-herdr-input-receipt.test.js",
+      "sha256": "4695a311eff6b384baa66c26d110186c093ba41f0c15c518d3c89a883d028471"
+    },
+    {
+      "path": "agent-bridge/test/hark-hook-resume.test.js",
+      "sha256": "1462a6f2799dcfeaf78c24e50557e1aeb787256cdc6b7cd37160155bafb902d0"
+    },
+    {
+      "path": "agent-bridge/test/hark-notify-regressions.test.js",
+      "sha256": "62e902561a878afbefcd59d8bcd0945fd61eeb74f1a454fb5ba719016902a637"
+    },
+    {
+      "path": "agent-bridge/test/hark-oc-adapter-safety.test.js",
+      "sha256": "f758c44948925df97bd7e6a2755650697e417c96c06102ea239ded413fa49ebc"
+    },
+    {
+      "path": "agent-bridge/test/hark-oc-worker-safety.test.js",
+      "sha256": "96d255cd26b1fb2780aaaddff9f0d8df4a51005b4abedcd8ef08719153877d08"
+    },
+    {
+      "path": "agent-bridge/test/hark-process-lock.test.js",
+      "sha256": "cedb59f572431cbed198eebb590673a550691968d2d769037da7602c456648c2"
+    },
+    {
+      "path": "agent-bridge/test/hark-submission-attempt.test.js",
+      "sha256": "70a8a715f45c1ded48850c74516594f0f6e125a155008081651e37f12fd2c806"
+    },
+    {
+      "path": "agent-bridge/test/hark-submission-rejection.test.js",
+      "sha256": "3ec5fa2f554bae7cb8ed0a7be43ceeda63827f08e64bcaabb1ec4acd7d179825"
+    },
+    {
+      "path": "agent-bridge/test/hark-watcher-observer.test.js",
+      "sha256": "368c765c48c5757d8c075bd74f9ad705a832e55c3ef4683206ea5bf6277de715"
+    },
+    {
+      "path": "agent-bridge/test/hark-zcode-cancellation.test.js",
+      "sha256": "5770c15e84a15173a0be1e6accb3a90c1e9b47493a8851f679c7ac13401fe7bf"
+    },
+    {
+      "path": "agent-bridge/test/hark-zcode-control.test.js",
+      "sha256": "d8134e74dd562b5b5b83a4847c316f1620a71b2a9268cde661d9a4874f20cf2b"
+    },
+    {
+      "path": "agent-bridge/test/hark-zcode-prompt.test.js",
+      "sha256": "18736406df38f569b235ec2cc62aa4158b45a76bde7c766b8f212f1dae3596b1"
+    },
+    {
+      "path": "agent-bridge/test/hark-zcode-rebinding.test.js",
+      "sha256": "07609856c423cd3f1410503bef9090bf109169ce80ce20791d71e8b024fbef80"
+    },
+    {
+      "path": "agent-bridge/test/install.test.js",
+      "sha256": "4618d6bcbe0b5e52d3f9ee82c28f4d79b472bfdc4b9228b21b4b61c15500dfff"
+    },
+    {
+      "path": "agent-bridge/test/lifecycle.test.js",
+      "sha256": "fb36f9ae66fa406a49e5b9fd016511b0ec6e7d3220796ebb9b2a2dbd395df5df"
+    },
+    {
+      "path": "agent-bridge/test/location.test.js",
+      "sha256": "0bbf9b8ab63b26860ae952cd8b513181f7108c2cc1c609332c9874ca97956cd0"
+    },
+    {
+      "path": "agent-bridge/test/messages.test.js",
+      "sha256": "eb71bb2110fe716ea7f46754c3cc347bcda45d8e4b01fa6b386f8c7d627f03e9"
+    },
+    {
+      "path": "agent-bridge/test/notifications.test.js",
+      "sha256": "091d6a1903ce91ab90af11938e9c54d4f4298ac0ef40a112ef5ac11e40a303c9"
+    },
+    {
+      "path": "agent-bridge/test/opencode-admission.test.js",
+      "sha256": "7f82059df856e6a5cd22717b20e950898d74d2afa3a3dd62c0f01b0be2a8c555"
+    },
+    {
+      "path": "agent-bridge/test/opencode.test.js",
+      "sha256": "c0417550b87474c8a787792d32f9a6bf97923efe541e3efaf5e1c9548f70ddcb"
+    },
+    {
+      "path": "agent-bridge/test/publication.test.js",
+      "sha256": "64fc112894eec08ad26bd55789d587b009b4436c95111953183cdca07054383a"
+    },
+    {
+      "path": "agent-bridge/test/startup-recovery.test.js",
+      "sha256": "77b38b3695b2a54ee1b1b9612e0bf6dd0f7c92672fb37947d10f7e3e5cfa80f6"
+    },
+    {
+      "path": "agent-bridge/test/tunnel-runtime.test.js",
+      "sha256": "190070e601042810a54b5a9a7b3a6afe636f874909fad9f3bb1245bde5aad784"
+    },
+    {
+      "path": "agent-bridge/test/util.test.js",
+      "sha256": "d1db033f1d8799fbf5b3f704395c5218d84a3d830561c0052b5b39aa0b366059"
+    },
+    {
+      "path": "agent-bridge/test/watcher.test.js",
+      "sha256": "33fdf460a09ae91cbe164d94f66190d96bd209cf4ef680fb5f43fd670524ebe5"
+    },
+    {
+      "path": "agent-bridge/test/worker-context.test.js",
+      "sha256": "cb86c899711381a34b3f955264a04d70d09254e5241a5b692d2b35057cd5508f"
+    },
+    {
+      "path": "agent-bridge/test/worker-policy.test.js",
+      "sha256": "9896ddd77e09625174660cedd465f7adf2a104b0156e3f9286338311c652443c"
+    },
+    {
+      "path": "agent-bridge/test/worker-scheduling.test.js",
+      "sha256": "58c01ea2477ddefbb67685000b97835e9f0800602572a84eb80aac2b644c23c5"
+    },
+    {
+      "path": "agent-bridge/test/zcode-adoption.test.js",
+      "sha256": "daab4fe1d358f67fda180f1682d95e0c55611d1a6f6cde2473ba514916ed8dc7"
+    },
+    {
+      "path": "agent-bridge/test/zcode-cancellation.test.js",
+      "sha256": "72218186134aa23eb620f9f7d8e38fe486573b1a92853483b6f1bbbed4c59ba3"
+    },
+    {
+      "path": "agent-bridge/test/zcode-errors.test.js",
+      "sha256": "70b4c5f6592b36384dc4ac4c47119a3c3c08a725dbef3c98815729787c4996ff"
+    },
+    {
+      "path": "agent-bridge/test/zcode-observation.test.js",
+      "sha256": "c19b75a8f29f3a1f2fb711881fcaaed0817dcf0767deb2997022a6f4db609b59"
+    },
+    {
+      "path": "agent-bridge/test/zcode-readiness.test.js",
+      "sha256": "85173a278bd640d8633db17250b9227a8d6f647c9d81d7db0a3d2bcf10d4b204"
+    },
+    {
+      "path": "agent-bridge/test/zcode-relay-lease.test.js",
+      "sha256": "e20f595e874e52d833c680f164f6ed8eeee9e60ab1c46bdf405fb6208bbe0b44"
+    },
+    {
+      "path": "agent-bridge/test/zcode-remote.test.js",
+      "sha256": "050681be6193b59120f63cfc47a46161cee436245a24ca069b73b300daf1bf7a"
+    },
+    {
+      "path": "agent-bridge/test/zcode-terminal-cancellation.test.js",
+      "sha256": "b47613bae55a9be66e43e7d3845d3faa908af728c72357488edc774179a27cb4"
+    },
+    {
+      "path": "agent-bridge/test/zcode-worker.test.js",
+      "sha256": "f00a009988a61cb1208142e3b571c100f2c621b72138d28c0e3b287043d334d2"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "f774c9fcab658b2fd1c458fd4aa9a31f8b0ff8308ab83b83d3150dd64aad680f"
+    },
+    {
+      "path": "package.json",
+      "sha256": "0783f9dc568d39434fd3d64b2606e2a56ce0f44155a6d0e1d4feffb282cd54c4"
+    },
+    {
+      "path": "tools/build-zcode-sdk.cjs",
+      "sha256": "f104b0280143e9a6fee2299a6b264f34ad6be23cca7d10ccf015d77a688d264d"
+    },
+    {
+      "path": "tools/check-publication.cjs",
+      "sha256": "8ffe70e4cd384540667334b76b24c26ca3ec62db6a0310602ef45e1538bea728"
+    },
+    {
+      "path": "tools/configure-cbc-context.cjs",
+      "sha256": "0d19b160605bdff352c725c3499993e7dbbe6fa251bae7bb77837415265f7d42"
+    },
+    {
+      "path": "tools/diagnose-agent-ipc.cjs",
+      "sha256": "459cd315586b344d67eeed51648ba4a91170c265032f5d080ffc478633bfb7d9"
+    },
+    {
+      "path": "tools/layout-smoke.cjs",
+      "sha256": "6104c6ff6eee28327231d89b8a676bd67faf15a0c474af0fe7fe834ce0b63a1e"
+    },
+    {
+      "path": "tools/native-queue-smoke.cjs",
+      "sha256": "3ac18b8f9da7e5f80d384af20f22fb84473a9d00350814cee16485725d6cf185"
+    },
+    {
+      "path": "tools/run-e2e.cjs",
+      "sha256": "2e231f4bf42b60a8f3b21e4f7cbdd48749709c258a6f1a77324f372231f03c93"
+    },
+    {
+      "path": "tools/start-ydot-tunnel.ps1",
+      "sha256": "826db781b6101c2b86272b35c172952e19c000410ca39dbfeed9c478cbe75312"
+    },
+    {
+      "path": "tools/ydot-tunnel-runtime.cjs",
+      "sha256": "6f86bbb7d3cae2ab143133db5fade09ff3afb58a89ce74a4b08dee8c32954087"
+    },
+    {
+      "path": "tools/zcode-probe.cjs",
+      "sha256": "7c6468bf1fca45b0de94c234b3e8f0c0ec6755cac0e7605da652113c57d30fa5"
+    }
+  ]
+}

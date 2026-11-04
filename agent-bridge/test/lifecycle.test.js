@@ -12,6 +12,8 @@ process.env.BRIDGE_STUB_STATE = path.join(root, 'herdr.json');
 process.env.BRIDGE_STUB_QUEUE = path.join(root, 'queue.ndjson');
 process.env.AGENT_BRIDGE_CODEX_JS = path.join(__dirname, 'fixtures', 'codex-stub.cjs');
 const { saveTask, loadTask, withLock, writeJsonAtomic } = require('../lib/util');
+const agentRegistry = require('../lib/agents');
+agentRegistry.agents['fixture-native'] = { ...agentRegistry.getAgent('cbc'), id: 'fixture-native', submitWorker: null };
 const { submit, recoverOne, failDispatch } = require('../bin/agent-bridge');
 const { assertWorker, updateWorkerSession } = require('../lib/worker');
 const { notifyTask, acknowledgeTask } = require('../lib/notify');
@@ -36,8 +38,8 @@ test('startup trust blockers notify at round zero without an execution watcher o
   saved.status = 'cancelled'; saveTask(saved);
 });
 
-function task(id) {
-  return { id, agent: 'cbc', stateDir: root, cwd: root, herdrSession: 'audit-test',
+function task(id, agent = 'cbc') {
+  return { id, agent, stateDir: root, cwd: root, herdrSession: 'audit-test',
     paneId: 'w1:p1', terminalId: 'term-test', agentName: id, round: 0,
     status: 'ready', history: [], codexThread: 'audit-thread' };
 }
@@ -49,26 +51,26 @@ function stub(value, mode) {
 }
 
 test('fast completion is observed and a task is submitted exactly once', async () => {
-  const value = task('audit-fast');
+  const value = task('audit-fast', 'fixture-native');
   stub(value, 'fast');
   await submit(value, 'small task', { activityTimeoutMs: 10, startWatcherFn: () => 123 });
   assert.equal(loadTask(value.id).submission.status, 'observed');
   const calls = JSON.parse(fs.readFileSync(process.env.BRIDGE_STUB_STATE)).calls;
-  assert.equal(calls.filter(call => call[1] === 'send-text').length, 1);
-  assert.equal(calls.filter(call => call[1] === 'send-keys').length, 1);
+  assert.equal(calls.filter(call => call[1] === 'prompt').length, 1);
+  assert.equal(calls.filter(call => call[1] === 'send-keys').length, 0);
   value.status = 'accepted';
   saveTask(value);
 });
 
 test('uncertain submission is durable, never resent, and recover stays observational', async () => {
-  const value = task('audit-uncertain');
+  const value = task('audit-uncertain', 'fixture-native');
   stub(value, 'idle');
   await assert.rejects(submit(value, 'small task', { activityTimeoutMs: 10 }), /Timed out/);
   assert.equal(loadTask(value.id).status, 'submission_unknown');
   const actions = await recoverOne(loadTask(value.id));
   assert.match(actions[0], /remains uncertain/);
   const calls = JSON.parse(fs.readFileSync(process.env.BRIDGE_STUB_STATE)).calls;
-  assert.equal(calls.filter(call => call[1] === 'send-text').length, 1);
+  assert.equal(calls.filter(call => call[1] === 'prompt').length, 1);
 });
 
 test('session recovery filters identical pane IDs by task, server and launch time', () => {

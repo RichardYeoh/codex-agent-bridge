@@ -41,12 +41,17 @@ async function cancelNative(task, { reconcileOnly = false, worker = getAgent(tas
   const previous = task.cancellation;
   task.status = 'cancel_pending';
   task.cancellation = { binding: expected, requestedAt: previous?.requestedAt || now(), phase: 'pending',
-    interruptAttempted: previous ? previous.interruptAttempted : pending ? null : false };
+    interruptAttempted: previous ? previous.interruptAttempted : pending ? null : false,
+    interruptAttempts: previous?.interruptAttempts || [], previousWatcherPid: task.watcherPid || previous?.previousWatcherPid || null };
+  // A cancelled coordinator invalidates observation, never the native worker or its jobs. / 取消协调状态只使旧观察器失效，不中断原生工作或后台任务。
+  task.observerGeneration = (task.observerGeneration || 0) + 1; task.watcherPid = null;
   save(task);
-  const finish = receipt => {
-    const latest = current();
+  const finish = async receipt => {
+    let latest = current();
     if (latest.status !== 'cancel_pending') throw new Error('Cancellation task state changed; no state overwritten');
-    worker.verifyCancellationReceipt?.(latest, receipt);
+    await worker.verifyCancellationReceipt?.(latest, receipt);
+    latest = current();
+    if (latest.status !== 'cancel_pending') throw new Error('Cancellation task state changed during proof validation');
     const cancellation = task.cancellation;
     Object.assign(task, latest);
     task.status = 'cancelled'; task.error = null; task.watcherPid = null;
@@ -58,22 +63,38 @@ async function cancelNative(task, { reconcileOnly = false, worker = getAgent(tas
   };
   try {
     let receipt = await worker.cancellationState(task);
-    if (receipt.confirmed === true) return finish(receipt);
+    if (receipt.confirmed === true) return await finish(receipt);
     // Recovery and uncertain retries only reconcile; a newer native action must not be interrupted twice. / 恢复和不确定重试只对账，不能重复中断较新的原生工作。
-    if (!reconcileOnly && task.cancellation.interruptAttempted === false) {
+    const attempts = task.cancellation.interruptAttempts;
+    const canRetry = typeof worker.turnFingerprint === 'function' && attempts.length < 3;
+    if (!reconcileOnly && (task.cancellation.interruptAttempted === false || canRetry)) {
       ownership();
-      verify(task, inspect(task.herdrSession, task.paneId));
+      let nativeAuthorization;
+      try { verify(task, inspect(task.herdrSession, task.paneId)); }
+      catch (error) {
+        if (!['pane_not_found', 'agent_not_found', 'agent_not_registered'].includes(error.herdrCode)
+            || !worker.authorizePaneLessInterrupt) throw error;
+        nativeAuthorization = await worker.authorizePaneLessInterrupt(task);
+      }
       const owner = lease(task);
       if (!owner || owner.taskId !== task.id || owner.terminalId !== task.terminalId || owner.workerSessionId !== task.workerSessionId) {
         throw new Error('Cancellation Pane lease mismatch; no native interrupt attempted');
       }
       current(); ownership();
+      const fingerprint = nativeAuthorization?.turnFingerprint || await worker.turnFingerprint?.(task);
+      if (attempts.length && (!fingerprint || attempts.at(-1).turnFingerprint !== fingerprint)) {
+        throw new Error('Native cancellation turn changed; no repeated interrupt sent');
+      }
+      if (attempts.length && Date.now() - Date.parse(attempts.at(-1).at) < 1000) {
+        throw new Error('Cancellation retry cooldown; reconcile without resending');
+      }
+      attempts.push({ at: now(), turnFingerprint: fingerprint || null, nativeAuthorization: nativeAuthorization || null });
       task.cancellation.interruptAttempted = true; task.cancellation.interruptRequestedAt = now(); save(task);
       let interruptError;
-      try { await worker.cancelWorker(task); } catch (error) { interruptError = error; }
+      try { await worker.cancelWorker(task, { expectedFingerprint: fingerprint }); } catch (error) { interruptError = error; }
       // A lost reply may follow a successful interrupt; inspect once without resending. / 中断已执行也可能丢失回执，只核对一次而不重发。
       receipt = await worker.cancellationState(task);
-      if (receipt.confirmed === true) return finish(receipt);
+      if (receipt.confirmed === true) return await finish(receipt);
       if (interruptError) throw interruptError;
     }
     task.cancellation.evidence = receipt;

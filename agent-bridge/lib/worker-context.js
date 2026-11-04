@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const crypto = require('node:crypto');
 const { config, readJson, writeJsonAtomic, now, event, saveTask, taskDir, processAlive } = require('./util');
 const { agentInfo, api, resultPayload } = require('./herdr');
-const { getAgent, chooseAgentName } = require('./agents');
+const { getAgent, chooseAgentName, matchesHerdrAgent } = require('./agents');
 const { writeLease } = require('./worker-lease');
 const { POLICY_VERSION, renderWorkerPolicy } = require('./worker-policy');
 const { bindingKey, sameBinding } = require('./worker-binding');
@@ -58,6 +58,8 @@ function observedContext(task) {
       const entry = JSON.parse(line);
       if (entry.herdrSession !== task.herdrSession || entry.paneId !== task.paneId
           || (task.workerStartedAt && entry.timestamp < task.workerStartedAt)) continue;
+      if (entry.taskId !== task.id || entry.terminalId && task.terminalId && entry.terminalId !== task.terminalId) continue;
+      if (task.agent === 'agy' && (entry.source !== 'agy-native-hook' || entry.terminalId !== task.terminalId)) continue;
       if (entry.sessionId) sessionId = entry.sessionId;
       if (entry.source === 'compact') compactAt = entry.timestamp;
     } catch {}
@@ -150,6 +152,8 @@ function tryReuseContext(task, { fresh = false, inspect = agentInfo, call = api,
     if (priorBinding !== task.zcodeBindingSha256) return false;
   }
   const inherit = () => Object.assign(task, { workerSessionId: prior.workerSessionId,
+    ...(task.agent === 'cbc' && require('./worker-identity').cbcProcessProof(priorTask)
+      ? { cbcPriorProcessProof: require('./worker-identity').cbcProcessProof(priorTask) } : {}),
     agyDeliveryProfile: prior.agyDeliveryProfile || priorTask.agyDeliveryProfile,
     reusedFromTaskId: prior.lastTaskId, model: task.model || prior.model, effort: task.effort || prior.effort,
     ...(cancelled ? { forceFullContext: true, reusedTerminalStatus: 'cancelled' } : {}),
@@ -164,17 +168,18 @@ function tryReuseContext(task, { fresh = false, inspect = agentInfo, call = api,
       catch (paneError) { if (paneError.herdrCode === 'pane_not_found') paneMissing = true; else throw paneError; }
       if (!paneMissing) throw new Error('Saved worker Pane still exists without a registered agent; inspect before resuming');
     }
-    const live = resultPayload(call(task.herdrSession, ['agent', 'list'])).agents;
-    if (live.some(item => item.terminal_id === prior.terminalId)) throw new Error('Prior worker is still present; verify its new Pane before resuming');
+    require('./worker-identity').assertWorkerAbsent({ ...priorTask, herdrSession: task.herdrSession, agent: task.agent,
+      paneId: prior.paneId, terminalId: prior.terminalId, workerSessionId: prior.workerSessionId }, { call });
     inherit(); task.resumeContextSessionId = prior.workerSessionId;
     event(task, 'worker_context_resume_planned', { priorTaskId: prior.lastTaskId });
     return false;
   }
   try {
-    if (agent.agent !== getAgent(task.agent).herdrAgent || agent.terminal_id !== prior.terminalId
+    if (!matchesHerdrAgent(task.agent, agent.agent) || agent.terminal_id !== prior.terminalId
         || !['idle', 'done'].includes(agent.agent_status)) throw new Error('Saved worker identity or idle state changed; inspect before creating another session');
-    // Herdr 0.9.5 omits session IDs from pane/get; correlate the live terminal with Hook receipts. / Herdr 0.9.5查询不暴露会话ID，结合存活终端与Hook确认。
-    const receipt = attest({ ...task, paneId: prior.paneId, workerStartedAt: prior.workerStartedAt });
+    // Prefer the official native reference; use bound Hook evidence only for older integrations. / 优先使用官方原生引用，旧集成才使用绑定Hook证据。
+    const receipt = agent.agent_session?.value ? { sessionId: agent.agent_session.value }
+      : attest({ ...task, id: prior.lastTaskId, paneId: prior.paneId, terminalId: prior.terminalId, workerStartedAt: prior.workerStartedAt });
     if (receipt?.sessionId !== prior.workerSessionId) throw new Error('Saved worker session changed; inspect before creating another session');
     if (task.placement?.mode === 'pane') {
       const anchor = resultPayload(call(task.herdrSession, ['pane', 'get', task.placement.anchorPaneId])).pane;

@@ -25,7 +25,7 @@ function fixture(status = 'cancel_pending') {
     cwd: dir, stateDir: dir, workerSessionId: 'ses_original', herdrSession: 'test', paneId: 'w1:p1', terminalId: 'terminal-original' };
   saveTask(task);
   const calls = [], info = { id: task.workerSessionId, location: { directory: dir }, outcome: 'interrupted' };
-  const values = { 'session.get': info, 'session.active': {}, 'session.permission.list': [], 'session.form.list': [] };
+  const values = { 'session.get': info, 'session.active': {}, 'session.permission.list': [], 'session.form.list': [], 'session.inbox.list': [] };
   let interrupts = 0, inspections = 0;
   const request = op => { calls.push(op); if (!(op in values)) throw new Error('Unexpected native operation'); return values[op]; };
   const worker = { id: 'opencode', cancellationState: t => cancellationState(t, request), cancelWorker: () => { interrupts++; } };
@@ -36,7 +36,7 @@ function fixture(status = 'cancel_pending') {
 test('closed Pane with two native idle observations reconciles legacy cancellation, preserving the session and releasing scheduling', async () => {
   const f = fixture(); const result = await cancelNative(f.task, { ...f.dependencies, reconcileOnly: true });
   assert.equal(result.status, 'cancelled'); assert.equal(result.workerSessionId, 'ses_original');
-  assert.deepEqual(f.counts(), { interrupts: 0, inspections: 0 }); assert.equal(f.calls.length, 8);
+  assert.deepEqual(f.counts(), { interrupts: 0, inspections: 0 }); assert.equal(f.calls.length, 10);
   assert.equal(result.cancellation.phase, 'confirmed'); assert.equal(result.history.length, 1);
   assert.doesNotThrow(() => assertSingleActive({ ...f.task, id: 'next-task' }, taskList(f.dir)));
   const count = f.calls.length; await cancelNative(result, f.dependencies);
@@ -117,6 +117,41 @@ test('a closed/mismatched Pane or reassigned lease cannot authorize a native int
   }
 });
 
+test('explicit cancellation retries are bounded, fingerprint-bound, and recover never interrupts', async () => {
+  const f = fixture('running'); f.values['session.active'] = { ses_original: {} };
+  let attempts = 0, fingerprint = 'current-round-fingerprint';
+  f.worker.turnFingerprint = () => fingerprint;
+  f.worker.cancelWorker = (_task, options) => { assert.equal(options.expectedFingerprint, fingerprint); attempts++; };
+  const deps = { worker: f.worker, inspect: () => ({}), verify: () => ({}),
+    lease: () => ({ taskId: f.task.id, terminalId: f.task.terminalId, workerSessionId: f.task.workerSessionId }) };
+  await cancelNative(f.task, deps);
+  await cancelNative(loadTask(f.task.id), { ...deps, reconcileOnly: true });
+  assert.equal(attempts, 1);
+  for (let index = 0; index < 3; index++) {
+    const current = loadTask(f.task.id); current.cancellation.interruptAttempts.at(-1).at = new Date(Date.now() - 2000).toISOString(); saveTask(current);
+    await cancelNative(current, deps);
+  }
+  assert.equal(attempts, 3); assert.equal(loadTask(f.task.id).status, 'cancel_pending');
+  assert.equal(loadTask(f.task.id).cancellation.interruptAttempts.length, 3);
+  const g = fixture('running'); g.values['session.active'] = { ses_original: {} }; let count = 0;
+  g.worker.turnFingerprint = () => count === 0 ? 'original' : 'changed';
+  g.worker.cancelWorker = () => { count++; };
+  const otherDeps = { ...deps, worker: g.worker,
+    lease: () => ({ taskId: g.task.id, terminalId: g.task.terminalId, workerSessionId: g.task.workerSessionId }) };
+  await cancelNative(g.task, otherDeps);
+  const changed = loadTask(g.task.id); changed.cancellation.interruptAttempts[0].at = new Date(Date.now() - 2000).toISOString(); saveTask(changed);
+  await cancelNative(changed, otherDeps); assert.equal(count, 1); assert.match(loadTask(g.task.id).error, /turn changed/);
+});
+
+test('a missing Pane may use exact native authorization and lease without recreating a TUI', async () => {
+  const f = fixture('running'); f.values['session.active'] = { ses_original: {} }; let authorized = 0, interrupted = 0;
+  f.worker.authorizePaneLessInterrupt = () => { authorized++; return { turnFingerprint: 'exact-turn' }; };
+  f.worker.cancelWorker = (_task, options) => { interrupted++; assert.equal(options.expectedFingerprint, 'exact-turn'); f.values['session.active'] = {}; };
+  const result = await cancelNative(f.task, { ...f.dependencies,
+    lease: () => ({ taskId: f.task.id, terminalId: f.task.terminalId, workerSessionId: f.task.workerSessionId }) });
+  assert.equal(result.status, 'cancelled'); assert.equal(authorized, 1); assert.equal(interrupted, 1);
+});
+
 test('another unresolved owner of an active native session prevents an old task from interrupting it', async () => {
   const f = fixture('running'); saveTask({ ...f.task, id: 'new-task', round: 2, status: 'running' });
   f.values['session.active'] = { ses_original: { type: 'running' } };
@@ -157,15 +192,15 @@ test('CLI cancel/recover reconcile a closed-Pane fixture without native interrup
     const cli = path.join(f.dir, 'native-api.cjs'), operations = path.join(f.dir, 'native-operations.jsonl');
     fs.writeFileSync(cli, `const fs=require('fs');const op=process.argv[3];fs.appendFileSync(process.env.CANCEL_TEST_OPERATIONS,JSON.stringify(op)+'\\n');
       const data={'session.get':{id:'ses_original',location:{directory:process.env.AGENT_BRIDGE_STATE_DIR},outcome:'failed'},
-      'session.active':{},'session.permission.list':[],'session.form.list':[]};
+      'session.active':{},'session.permission.list':[],'session.form.list':[],'session.inbox.list':[]};
       if(!(op in data)){process.stderr.write('Unexpected native write');process.exit(3)}process.stdout.write(JSON.stringify({data:data[op]}));`);
     const env = { ...process.env, AGENT_BRIDGE_STATE_DIR: f.dir, AGENT_BRIDGE_OPENCODE: cli,
       CANCEL_TEST_OPERATIONS: operations, HERDR_BIN_PATH: path.join(f.dir, 'must-not-start-herdr.exe') };
     const result = spawnSync(process.execPath, [path.join(__dirname, '../bin/agent-bridge.js'), command, f.task.id], { env, encoding: 'utf8', timeout: 15000 });
     assert.equal(result.status, 0, result.stderr); assert.equal(loadTask(f.task.id).status, 'cancelled');
     const calls = fs.readFileSync(operations, 'utf8').trim().split('\n').map(JSON.parse);
-    assert.equal(calls.length, 8); assert.ok(calls.every(op => /^(session.get|session.active|session.permission.list|session.form.list)$/.test(op)));
+    assert.equal(calls.length, 10); assert.ok(calls.every(op => /^(session.get|session.active|session.permission.list|session.form.list|session.inbox.list)$/.test(op)));
     assert.equal(loadTask(f.task.id).workerSessionId, 'ses_original');
   }
-  assert.equal(getAgent('cbc').cancellationState, undefined);
+  assert.equal(typeof getAgent('cbc').cancellationState, 'function');
 });

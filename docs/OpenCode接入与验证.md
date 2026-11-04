@@ -45,17 +45,19 @@ node $bridge rework <任务ID> --model <已核实的Provider/GLM-5.3模型ID> --
 
 rework的模型参数当前只支持oc，先持久保存目标模型，再通过prepareSubmission按原会话切换，不另建空白会话。未指定新effort时清除旧模型variant绑定；显式effort必须由目标模型支持。后续同任务返工保持升级后的模型。既已使用GLM-5.3时不反复切换或无限重派，具体执行和例外见[Skill参考](../agent-bridge/skills/delegate-worker/references/opencode-cli.md)。
 
-状态来自真实会话、active集合、待审批请求和表单。失败映射为blocked/execution_failed，API不可用映射为blocked/api_unavailable，不凭窗口空闲宣布成功。窗口与API断开时原任务可能仍执行，保留原会话、轮次和现场，不自动换模型或重发。
+状态来自真实会话、active集合、待审批请求、表单和未投递输入队列。当前轮失败映射为blocked/execution_failed；API读取连续失败3次后才上报blocked/api_unavailable，单次失败不改变原生执行状态。观察器启动时API不可用仍会启动已登记会话的原生TUI，并继续重试只读核对。窗口与API断开时原任务可能仍执行，保留原会话、轮次和现场，不自动换模型或重发。
 
 观察器以程序核对快照，活跃时约1秒间隔、其他未闭合状态约3秒；每次还包含CLI/API耗时。状态未变化不重复上报，验收或取消后仅检查本地租约，不继续API轮询。此方法不产生模型轮次，但存在本地CLI进程和API开销。当前CLI的api事件订阅未得到可用流式输出，因此未将该入口当作可靠事件源；后续有必要时可改为官方流式客户端。
 
 派工返回只确认准入和启动；交付后由公共watcher进入review_pending并通知主控。回执包含当前任务、轮次、Pane、Herdr服务和原生session。旧轮空闲快照不能结束新提交轮次。任务提交使用稳定准入ID；结果不确定时保持submission_unknown，禁止盲目重试。
 
-`cancel`先核对保存的原生sessionID及工作目录。连续两次快照均无active、待审批和表单时，确认原生执行已停止，即使Pane已关闭也可收口为cancelled；不要求重建Pane。原生outcome为failed也可能已经停止，取消确认不代表技术验收通过，也不撤销已有文件修改。服务重启后的原生会话数据必须保留。
+`cancel`先核对保存的原生sessionID及工作目录。连续两次快照均无active、待审批、表单和未投递输入时，才确认原生执行已停止。Pane关闭本身不构成取消证据。原生outcome为failed也可能已经停止，取消确认不代表技术验收通过，也不撤销已有文件修改。服务重启后的原生会话数据必须保留。
 
-原生仍活跃时，只有首次明确取消且Pane身份、terminal和任务租约一致，才允许发送一次session.interrupt；另一个未闭合任务持有同一原生会话时禁止中断。发送前持久记录尝试，回执丢失后只对账，不自动重发。旧版cancel_pending没有可靠发送记录时同样按结果不确定处理。
+原生仍活跃时，取消只可作用于本任务当前准入所启动的执行。Pane存在时核对其session、terminal和任务租约；Pane明确缺失时，适配器再核对原任务/轮次、原生会话目录、当前Pane租约及同一原生session的未闭合属主，并从原生消息记录确认当前执行仍对应本任务的稳定准入ID。随后再次读取同一原生回合指纹；两次指纹不一致时不发送中断。另一个未闭合任务持有同一原生会话时禁止中断。
 
-对cancel_pending执行`recover`只读取原生状态，不中断、不恢复执行、不提交文本、不新建会话。原生已经空闲时解除旧任务的调度阻塞，并通过既有通知模块对账；保留原生会话ID和历史，不改其他任务或租约。API不可用、身份不符、仍有执行或待处理输入时继续保留cancel_pending及原因。
+待审批请求、表单或额外的未投递用户/控制输入存在时，不中断原生执行、不代替用户批准或拒绝，也不取消外来输入。若session.inbox.list仅含本任务当前准入ID且会话空闲，可通过session.inbox.cancel撤销该未投递准入；存在其他输入时保持cancel_pending并返回待处理ID，待用户处置。对仍活跃且已核实为本任务准入的执行，session.interrupt最多按同一turnFingerprint执行有限重试；每次重试前重新确认任务租约、无审批/表单/新输入且回合指纹未变。超过持久化尝试上限或证据变化后停止重试并保留cancel_pending。
+
+对cancel_pending执行`recover`不自动重启TUI、不提交提示词，也不把Pane关闭推断为取消。原生状态与同一轮回合指纹对账后，只有两次原生快照均空闲且没有审批、表单或未投递输入时才收口；身份或API证据不足时继续保留cancel_pending及原因。对于旧任务没有可靠中断记录的情形，先按原session、目录和本任务准入ID对账，不能生成新准入ID。
 
 ```powershell
 $env:AGENT_BRIDGE_STATE_DIR = '<原任务状态根>'
@@ -65,6 +67,22 @@ node $bridge status <旧任务ID>
 ```
 
 维护更新后直接调用新版命令即可，无需重启主控CLI或OpenCode。不得以关闭窗口为依据手改task.json；只有确认cancelled后才继续派工，相关任务仍可按登记的原生ID恢复上下文。
+
+### 失败回合、提交对账与晚到交付
+
+`resume <任务ID>`只恢复观察或继续处理状态，不会自动重发失败回合。用户确认需在同一session重试当前轮时，显式执行`resume <任务ID> --retry-failed`。命令仅接受本轮原生outcome为failed、idle时间晚于本轮准入时间和失败基线、无active/审批/表单/未投递输入、原生最近user消息仍对应当前桥接准入ID，且session、目录和Pane租约未变的任务。重试保留round和任务书路径，最多提交2个有独立attemptNumber和稳定消息ID的显式尝试；新准入ID写入本地journal后才调用session.prompt。普通resume、recover及观察器均不触发重试。
+
+如果session.prompt回执丢失，当前attempt按sending保留。`recover <任务ID>`通过session.inbox.list和session.message.get按原session、准入ID对账：已在原生Inbox或消息记录中找到时恢复观察；只在本地journal仍为prepared、且能够证明尚未调用prompt时报告not_sent；发送已开始但原生证据未能核实则保持submission_unknown，不换attemptNumber、不重发。API不可用、身份不符、审批/表单或外来输入存在时继续阻塞并说明原因。
+
+`settle <任务ID>`只读核对当前轮原生执行已结束、没有active/审批/表单/未投递输入且本轮交付文件已写入后，将delivery_missing转为review_pending并通知Codex。该命令不提交提示词、不改变round、不重建会话。报告缺失或原生完成证据不足时保持原状态。
+
+长任务可通过`observe <任务ID> --wait-timeout-ms <毫秒>`调整观察窗口并重新附着原session；命令写入变更历史，不提交新提示词。watcher传输故障或Herdr短暂不可用不能作为执行失败依据，recover保持原running及存活watcher绑定不变。
+
+### Pane身份与观察器生命周期
+
+`resume --force`仅在worker确认不存在时允许重建Pane。原Pane仍存在但身份、terminal或session不匹配时，保持现场并拒绝启动第二个TUI/观察器；由主控核实旧Pane与租约后决定如何恢复。新worker启动时若只读API暂时不可用，仍运行保存的原生TUI并退避重试状态读取；只有启动器确认新Pane无法运行或身份无效时才进入清理路径。
+
+此桥接与Herdr官方OpenCode集成尚未经过共存验证。接入本桥接的Pane不应同时加载Herdr官方OpenCode插件/集成，以避免双方写入同一Pane的执行状态或绕过桥接观察器。当前Hark审查环境显示官方集成未安装；不据此推断其他机器的安装状态。
 
 ### 历史失败与新任务准入
 
@@ -85,3 +103,5 @@ YDOT-OC-FAILED-ADMISSION-20261101-F1：新增15项准入回归，连同既有OC�
 2026-11-01取消确认修复：取消模块13项、既有OC14项定向测试全部通过；全量176项中175通过、1跳过，既有端到端验收8/8通过。跳过项为用户已取消接入并归档的官方Windows Tunnel客户端doctor。新增隔离CLI验收以临时状态和原生API替身验证真实cancel/recover命令：Herdr入口不可用时仍能收口原生已空闲的任务，且没有interrupt、prompt或create调用。覆盖旧cancel_pending、失败终态、双快照变化、审批/表单、API故障、身份/租约冲突、丢失回执、重复请求及并发绑定变化；不等同于真实业务任务恢复，本轮未操作业务状态或原生会话。
 
 真实文件任务、同会话返工、关闭Pane后的原ID恢复、差量记忆、原生read/edit单次审批、批准后立即resume及运行中断已通过。95项自动回归、8项既有交付验收通过，公开证据见[evidence](../evidence/2026-10-28-opencode/README.md)。模型variant的设置与回读已验证，未另做指定variant的生成测试。整机重启、长期无人值守、真实额度耗尽、全部表单分支及外部后台命令撤销未全面验证；新版Codex空闲自动唤醒的既有验证缺口继续保留。
+
+Hark-OC adapter整改定向验证使用临时状态根与OpenCode/Herdr替身：Pane-less中断授权、当前回合指纹、租约/同session属主、审批/表单和外来输入拒绝、session Inbox/消息ID准入对账、失败attempt稳定ID、lost-ack阻断换号、单次API读取失败去抖及API启动故障下继续启动TUI。此隔离验证不连接业务服务，不替代公共CLI集成回归或真实业务恢复验证。

@@ -14,6 +14,9 @@ class Remote extends EventEmitter {
   async command(envelope) { record(['command', envelope.commandId]); throw new Error('acknowledgement uncertain'); }
   async query(envelope) {
     record(['query', envelope.commandId]);
+    if (process.env.ZCODE_TEST_QUERY_UNKNOWN) {
+      return { results: [{ key: { sessionId: envelope.sessionId, commandId: envelope.commandId }, result: 'unknown' }] };
+    }
     return { results: [{ key: { sessionId: envelope.sessionId, commandId: envelope.commandId },
       result: { status: 'accepted', commandId: envelope.commandId, result: { sessionId: 'recovered-original-session' } } }] };
   }

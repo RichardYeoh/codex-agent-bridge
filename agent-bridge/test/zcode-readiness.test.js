@@ -133,7 +133,7 @@ test('stale receipts never authorize new submission', async () => {
   writeJsonAtomic(ready.files(f.task).receipt, { requestId: 'old', ready: true });
   await assert.rejects(ready.refreshWorker(f.task, { forSubmission: true }, { inspect: () => f.agent,
     send: () => { sends++; }, clock: () => clock, pause: async () => { clock += 10; }, timeoutMs: 20 }), /not acknowledged/);
-  assert.equal(sends, 2);
+  assert.equal(sends, 3);
 });
 
 test('receipt identity, native proof and concurrent local binding changes are rejected', async () => {
@@ -154,6 +154,12 @@ test('receipt identity, native proof and concurrent local binding changes are re
 
 function startWorker(f, mutate = () => {}) {
   const stateFile = path.join(f.task.stateDir, 'transport.json'), inbox = path.join(f.task.stateDir, 'inbox.ndjson');
+  const priorReceiptPath = path.join(f.task.stateDir, 'tasks', f.task.id, 'zcode-state.json');
+  const priorReceipt = readJson(priorReceiptPath, null);
+  if (priorReceipt?.workerPid === process.pid) {
+    priorReceipt.workerPid = 2147483647;
+    writeJsonAtomic(priorReceiptPath, priorReceipt);
+  }
   const value = { snapshot: f.snapshot, ack: f.journal.ack, agent: f.agent, calls: [] }; mutate(value);
   writeJsonAtomic(stateFile, value);
   const env = { ...process.env, AGENT_BRIDGE_STATE_DIR: f.task.stateDir, AGENT_BRIDGE_TASK_ID: f.task.id,
@@ -168,7 +174,7 @@ function startWorker(f, mutate = () => {}) {
 async function waitUntil(predicate, message) {
   const end = Date.now() + 12000;
   while (Date.now() < end) { if (predicate()) return; await new Promise(resolve => setTimeout(resolve, 15)); }
-  throw new Error(message);
+  throw new Error(typeof message === 'function' ? message() : message);
 }
 async function stopWorker(worker) {
   worker.child.stdin.end();
@@ -234,7 +240,11 @@ test('a new task can reuse an accepted live worker and receives its own bound re
     const next = { ...f.task, id: 'next-task-fixture', round: 0, status: 'ready', submission: null, history: [], reusedFromTaskId: f.task.id };
     saveTask(next); writeLease(next); let input;
     const receipt = await ready.refreshWorker(next, { forSubmission: true }, { inspect: () => f.agent,
-      send: (_session, args) => { if (args[1] === 'send-text') input = args[3]; else worker.child.stdin.write(input + '\n'); } });
+      send: (_session, args) => {
+        if (args[1] === 'send-text') input = args[3];
+        else if (args[3] === 'ctrl+u') input = '';
+        else worker.child.stdin.write(input + '\n');
+      } });
     assert.equal(receipt.ready, true); assert.equal(receipt.taskId, next.id); assert.equal(receipt.workerPid, worker.child.pid);
     assert.equal(receipt.proof.previous, null);
     assert.equal(readJson(worker.stateFile).calls.some(call => call.op === 'command'), false);
@@ -256,7 +266,11 @@ test('real CLI rework and real worker handshake preserve native context and admi
     coordinator = spawn(process.execPath, ['--require', worker.preload, path.join(__dirname, '../bin/agent-bridge.js'),
       'rework', f.task.id, '--prompt-file', prompt], { env: worker.env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
     let result = ''; coordinator.stdout.on('data', data => { result += data; }); coordinator.stderr.on('data', data => { result += data; });
-    await waitUntil(() => coordinator.exitCode !== null, 'CLI rework stalled: ' + result + worker.output());
+    coordinator.on('error', error => { result += ` spawn-error=${error.message}`; });
+    await waitUntil(() => coordinator.exitCode !== null,
+      () => `CLI rework stalled pid=${coordinator.pid} exit=${coordinator.exitCode}: ` + result + worker.output()
+        + ` round=${loadTask(f.task.id).round} workerState=${readJson(path.join(f.task.stateDir, 'tasks', f.task.id, 'zcode-state.json'))?.state}`
+        + ` operations=${JSON.stringify(readJson(worker.stateFile).calls.map(call => call.op))}`);
     assert.equal(coordinator.exitCode, 0, result + worker.output());
     await waitUntil(() => readJson(ready.files({ ...f.task, round: 2 }).journal, null)?.status === 'terminal', 'new fixture round not observed');
     const saved = loadTask(f.task.id);
@@ -267,6 +281,17 @@ test('real CLI rework and real worker handshake preserve native context and admi
     assert.equal(calls.length, 1); assert.equal(calls[0].type, 'sendText');
     assert.ok(JSON.stringify(calls[0].modelSelection).includes('GLM-5.3'));
     assert.ok(JSON.stringify(calls[0].modelSelection).includes('max'));
+    const terminalCalls = readJson(worker.stateFile).calls.filter(call => call.op === 'herdr');
+    const processInfoCalls = terminalCalls.map((call, index) => ({ call, index }))
+      .filter(item => item.call.args[0] === 'pane' && item.call.args[1] === 'process-info');
+    const clearInputAt = terminalCalls.map((call, index) => ({ call, index }))
+      .filter(item => item.call.args[0] === 'pane' && item.call.args[1] === 'send-keys' && item.call.args[3] === 'ctrl+u')
+      .at(-1)?.index ?? -1;
+    const promptAt = terminalCalls.findIndex(call => call.args[0] === 'pane' && call.args[1] === 'run');
+    assert.equal(processInfoCalls.length, 2);
+    assert.ok(processInfoCalls[0].index < clearInputAt && clearInputAt < processInfoCalls[1].index && processInfoCalls[1].index < promptAt);
+    assert.equal(terminalCalls[promptAt].args[3], loadTask(f.task.id).promptPath);
+    assert.equal(readJson(worker.stateFile).calls.filter(call => call.op === 'prove-worker-process').length, 2);
   } finally {
     clearInterval(timer);
     if (coordinator && coordinator.exitCode === null) { coordinator.kill(); await new Promise(resolve => coordinator.once('exit', resolve)); }

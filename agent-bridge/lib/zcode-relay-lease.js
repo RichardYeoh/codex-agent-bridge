@@ -1,59 +1,93 @@
 'use strict';
 
-const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const { processAlive } = require('./util');
+const fs = require('node:fs');
+const { acquire: acquireNativeLock } = require('./process-lock');
 
 const DEFAULT_ROOT = path.resolve(__dirname, '../../.local/zcode-relay-leases');
 
-// All bridge entry points share one lease per binding, across business state roots. / 所有桥接入口按远控绑定共享租约，不按业务状态根分割。
-function acquire(binding, { root = process.env.AGENT_BRIDGE_ZCODE_LEASE_DIR || DEFAULT_ROOT, alive = processAlive } = {}) {
+// One kernel-owned lock serializes every bridge Relay client for a Desktop binding. / 一个由内核持有的锁串行化同一Desktop绑定的所有桥接Relay客户端。
+async function acquire(binding, { root = process.env.AGENT_BRIDGE_ZCODE_LEASE_DIR || DEFAULT_ROOT,
+  acquireLock = acquireNativeLock, alive = legacyProcessAlive } = {}) {
+  if (!binding?.sid || !binding?.mid) throw new Error('ZCode Relay lease requires a complete Desktop binding');
   const key = crypto.createHash('sha256').update(`${binding.sid}\n${binding.mid}`).digest('hex');
-  const directory = path.join(path.resolve(root), `${key}.lock`), ownerFile = path.join(directory, 'owner.json');
-  fs.mkdirSync(root, { recursive: true });
-  const token = crypto.randomUUID();
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      fs.mkdirSync(directory);
-      try { fs.writeFileSync(ownerFile, JSON.stringify({ pid: process.pid, token, createdAt: Date.now() }), { flag: 'wx' }); }
-      catch (error) { try { fs.rmdirSync(directory); } catch {} throw error; }
-      let released = false;
-      return { release() {
-        if (released) return;
-        released = true;
-        try {
-          const current = JSON.parse(fs.readFileSync(ownerFile, 'utf8'));
-          if (current.token !== token || current.pid !== process.pid) return;
-          fs.unlinkSync(ownerFile); fs.rmdirSync(directory);
-        } catch (error) { if (error.code !== 'ENOENT') throw error; }
-      } };
-    } catch (error) {
-      if (error.code !== 'EEXIST') throw error;
-      let owner;
-      try { owner = JSON.parse(fs.readFileSync(ownerFile, 'utf8')); } catch {}
-      if (owner && Number.isSafeInteger(owner.pid) && !alive(owner.pid)) {
-        // Remove only the fixed owner file and empty directory; never recurse into computed paths. / 只移除固定归属文件及空目录，不递归删除计算路径。
-        const reaper = path.join(path.resolve(root), `${key}.reap`);
-        let handle;
-        try {
-          handle = fs.openSync(reaper, 'wx');
-          const current = JSON.parse(fs.readFileSync(ownerFile, 'utf8'));
-          if (current.token === owner.token && current.pid === owner.pid && !alive(current.pid)) {
-            fs.unlinkSync(ownerFile); fs.rmdirSync(directory);
-          }
-        } catch (cleanupError) {
-          if (!['EEXIST', 'ENOENT'].includes(cleanupError.code)) throw cleanupError;
-        } finally {
-          if (handle !== undefined) { fs.closeSync(handle); fs.unlinkSync(reaper); }
-        }
-        continue;
-      }
-      const busy = new Error(`ZCode Relay is already owned by a local bridge${owner?.pid ? ` (PID ${owner.pid})` : ''}; no connection attempted`);
-      busy.code = 'ZCODE_RELAY_LOCAL_BUSY'; throw busy;
-    }
+  const leaseRoot = path.resolve(root);
+  fs.mkdirSync(leaseRoot, { recursive: true });
+  let releaseNative;
+  try { releaseNative = await acquireLock(path.join(leaseRoot, key), 0); }
+  catch (error) {
+    if (!/Timed out acquiring native coordination lock/.test(error.message)) throw error;
+    const busy = new Error('ZCode Relay is already owned by a local bridge; no connection attempted');
+    busy.code = 'ZCODE_RELAY_LOCAL_BUSY'; throw busy;
   }
-  throw new Error('ZCode Relay lease changed concurrently; no connection attempted');
+  try {
+    const legacyOwner = readLegacyOwner(path.join(leaseRoot, `${key}.lock`));
+    if (legacyOwner) {
+      let isAlive;
+      try { isAlive = alive(legacyOwner.pid); }
+      catch (cause) { throw legacyReviewRequired('legacy owner liveness could not be established', cause); }
+      if (typeof isAlive !== 'boolean') throw legacyReviewRequired('legacy owner liveness result is unknown');
+      if (isAlive) {
+        const busy = new Error(`ZCode Relay is already owned by a legacy local bridge (PID ${legacyOwner.pid}); no connection attempted`);
+        busy.code = 'ZCODE_RELAY_LOCAL_BUSY'; throw busy;
+      }
+      // Preserve dead legacy owner evidence; stale .reap markers are deliberately ignored. / 保留已退出旧租约证据；有意忽略陈旧.reap标记。
+    }
+  } catch (error) {
+    try { await releaseNative(); } catch (releaseError) { error.cause ||= releaseError; }
+    throw error;
+  }
+  let released = false;
+  return { async release() {
+    if (released) return;
+    released = true;
+    await releaseNative();
+  } };
 }
 
-module.exports = { acquire };
+function readLegacyOwner(directory) {
+  let directoryInfo;
+  try { directoryInfo = fs.lstatSync(directory); }
+  catch (error) {
+    if (error.code === 'ENOENT') return null;
+    throw legacyReviewRequired('legacy lease directory could not be inspected', error);
+  }
+  if (!directoryInfo.isDirectory()) throw legacyReviewRequired('legacy lease path is not a directory');
+
+  let serialized;
+  try { serialized = fs.readFileSync(path.join(directory, 'owner.json'), 'utf8'); }
+  catch (error) { throw legacyReviewRequired('legacy owner file is missing or unreadable', error); }
+  let owner;
+  try { owner = JSON.parse(serialized); }
+  catch (error) { throw legacyReviewRequired('legacy owner file is empty or malformed', error); }
+  if (!owner || typeof owner !== 'object' || Array.isArray(owner)) {
+    throw legacyReviewRequired('legacy owner record has an invalid shape');
+  }
+  const ownerPid = owner.ownerPid;
+  const priorPid = owner.pid;
+  if (ownerPid !== undefined && priorPid !== undefined && ownerPid !== priorPid) {
+    throw legacyReviewRequired('legacy owner PID fields conflict');
+  }
+  const pid = ownerPid ?? priorPid;
+  if (!Number.isSafeInteger(pid) || pid <= 0) throw legacyReviewRequired('legacy owner PID is missing or invalid');
+  return { pid };
+}
+
+function legacyReviewRequired(reason, cause) {
+  const error = new Error(`Legacy ZCode Relay lease requires manual review (${reason}); no connection attempted`);
+  error.code = 'LEGACY_REVIEW_REQUIRED';
+  if (cause) error.cause = cause;
+  return error;
+}
+
+function legacyProcessAlive(pid) {
+  try { process.kill(pid, 0); return true; }
+  catch (error) {
+    if (error.code === 'ESRCH') return false;
+    if (error.code === 'EPERM') return true;
+    return undefined;
+  }
+}
+
+module.exports = { acquire, DEFAULT_ROOT };

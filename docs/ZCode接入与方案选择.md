@@ -49,7 +49,7 @@ Codex编写完整task-spec-v1，使用--agent zcode派工。缺少必要规格�
 ## 接管、恢复及限制
 
 - 使用zcode-control snapshot查看当前权威状态；只有请求内容在已有授权内时，显式approve-once当前interactionId，再resume。不会自动批准所有工具，也不授予项目级或完全访问权限。
-- 普通resume重新观察原会话/命令，关闭执行Pane后也可恢复；resume --force属于明确重投，必须先确认可以重复执行。
+- 普通resume重新观察原会话/命令；关闭执行Pane后凭原session和精确命令恢复，--force不重投已提交轮次。移动/原生恢复使用adopt-restored，身份不明先对账。
 - cancel发送stop并等待无activeWorks，未确认时保持cancel_pending。只关闭Herdr适配Pane并不等于停止Desktop中的模型执行。
 - 断网、登录过期、配额墙、模型繁忙、Desktop退出或远控关闭均保留任务与会话。模型侧可能存在自身重试，协调器不保证关闭全部内部重试。
 - 手机或网页同时连接可能触发KICKED；结束其他远控连接后再恢复，不能循环争抢。日常无需打开浏览器。

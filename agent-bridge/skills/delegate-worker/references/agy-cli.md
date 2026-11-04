@@ -24,6 +24,6 @@ PreInvocation将稳定规则通过官方injectSteps/systemMessage注入，同一
 
 blocked仅表示需要核查，不等于所有执行端都有统一的approve接口。原生agy还由Herdr识别UI状态；Hook补充用户交互、错误与后台任务未收敛的状态。审批处理后用resume恢复原轮观察；rework追加明确返工要求。连接、提交或停止状态不确定时禁止直接重发。
 
-人工接管按task.json中的Herdr服务、Pane及terminal核对身份；原生CLI恢复入口为agy --conversation <workerSessionId>。不得同时让两个进程修改同一会话。cancel通过原生Escape请求中断，观察实际状态；未确认停止保留cancel_pending，不宣称已停止。中断不能撤销已完成的文件修改或远端副作用。
+人工接管按task.json中的Herdr服务、Pane及terminal核对身份；原生CLI恢复入口为agy --conversation <workerSessionId>。不得同时让两个进程修改同一会话。cancel只登记取消并核对原生状态，不盲发Escape或审批键。活执行者需人工核实停止确切工作，再recover；未确认停止保留cancel_pending。中断不能撤销已完成的文件修改或远端副作用。
 
 主控、Herdr或模型服务暂不可用时保留任务状态、会话ID和交付。网络、配额墙与限流不触发协调器自动换模型、新建会话或无限重发；CLI自身可能重试，上限与行为由上游决定。恢复后先核对现场，再恢复监听或发送明确继续要求。若原生Hook因资源错误保持blocked而原CLI已空闲，主控在核实原轮结束后可通过该原生Pane发送具体继续要求，再resume原轮观察；不能在状态不明时调用resume --force。

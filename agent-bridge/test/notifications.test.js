@@ -26,6 +26,7 @@ test('multiple rounds coalesce to one wake and acknowledging removes the queued 
   for (let round = 1; round <= 6; round += 1) {
     value.round = round;
     value.completionSeq = round;
+    saveTask(value);
     await notifyTask(value, options);
     assert.equal(queue.items.length, 1);
   }
@@ -46,6 +47,7 @@ test('pause withdraws only bridge messages and resume does not replay accepted w
   assert.equal(paused.paused, true);
   assert.deepEqual(queue.items.map(item => item.id), ['user-message']);
   value.round = 2;
+  saveTask(value);
   await notifyTask(value, options);
   assert.equal(value.notification.status, 'paused');
   value.status = 'accepted';
@@ -87,6 +89,7 @@ test('local pending state survives notification transport failure without a rese
 test('quota, rate limit and network blockers are classified without treating normal credits as errors', () => {
   assert.equal(classifyBlocker('API error: insufficient_quota').type, 'quota');
   assert.equal(classifyBlocker('429 Too Many Requests').type, 'rate_limit');
+  assert.equal(classifyBlocker("429 usage exceeds frequency limit, but don't worry, your usage will reset later").type, 'rate_limit');
   assert.equal(classifyBlocker('fetch failed: ENOTFOUND api.example.test').type, 'network');
   assert.equal(classifyBlocker('Credits: 8.2; task completed'), null);
 });

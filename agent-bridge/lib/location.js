@@ -3,6 +3,21 @@
 const { api, resultPayload } = require('./herdr');
 const path = require('node:path');
 const { taskList } = require('./worker-scheduling');
+const { matchesHerdrAgent } = require('./agents');
+
+function ownedPanes(task, records, live) {
+  const owned = new Set();
+  for (const record of records.filter(item => item.herdrSession === task.herdrSession)) {
+    const exact = live.find(pane => pane.pane_id === record.paneId && pane.terminal_id === record.terminalId);
+    if (exact) { owned.add(exact.pane_id); continue; }
+    // Native references may survive restart/move; an ambiguous reference owns nothing. / 原生引用可跨重启或移动保留，歧义引用不授予布局归属。
+    if (!record.workerSessionId) continue;
+    const matches = live.filter(pane => pane.agent_session?.value === record.workerSessionId
+      && matchesHerdrAgent(record.agent, pane.agent));
+    if (matches.length === 1) owned.add(matches[0].pane_id);
+  }
+  return owned;
+}
 
 function placementFor(options, env = process.env) {
   if (options['new-workspace']) {
@@ -74,8 +89,7 @@ function createLocation(task, resumeId, { call = api, records = taskList(task.st
   if (placement.workspaceId && placement.workspaceId !== main.workspace_id) throw new Error('Anchor Pane does not belong to the specified project workspace');
   const workspaceId = main.workspace_id;
   const live = resultPayload(call(task.herdrSession, ['pane', 'list', '--workspace', workspaceId])).panes;
-  const owned = new Set(records.filter(record => record.herdrSession === task.herdrSession && record.workspaceId === workspaceId
-    && live.some(pane => pane.pane_id === record.paneId && pane.terminal_id === record.terminalId)).map(record => record.paneId));
+  const owned = ownedPanes(task, records, live);
   const layout = pane => resultPayload(call(task.herdrSession, ['pane', 'layout', '--pane', pane])).layout;
   const primary = layout(main.pane_id);
   let plan = planInTab(primary, owned, main.pane_id);
@@ -104,4 +118,4 @@ function createLocation(task, resumeId, { call = api, records = taskList(task.st
     ownsWorkspace: false, mode: 'tab' };
 }
 
-module.exports = { placementFor, splitDirection, planInTab, createLocation };
+module.exports = { placementFor, splitDirection, planInTab, createLocation, ownedPanes };

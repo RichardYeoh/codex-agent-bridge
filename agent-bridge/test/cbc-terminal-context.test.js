@@ -18,9 +18,17 @@ test.after(() => {
 
 function fixture() {
   const dir = path.join(root, 'case-' + ++count); fs.mkdirSync(dir); process.env.AGENT_BRIDGE_STATE_DIR = dir;
+  const startedAt = new Date(Date.now() - 60_000).toISOString();
+  const appData = path.join(dir, 'AppData Roaming');
+  const cbcShim = path.join(appData, 'npm', 'cbc.cmd');
+  const cbcScript = path.join(appData, 'npm', 'node_modules', '@tencent-ai', 'codebuddy-code', 'bin', 'codebuddy');
+  fs.mkdirSync(path.dirname(cbcScript), { recursive: true });
+  fs.writeFileSync(cbcShim, '@CALL "%_prog%" "%~dp0\\node_modules\\@tencent-ai\\codebuddy-code\\bin\\codebuddy" %*\r\n');
+  fs.writeFileSync(cbcScript, '# isolated CBC native script target\n');
   const source = { id: 'old-cbc-task', agent: 'cbc', stateDir: dir, cwd: dir, workerKey: 'input-sim',
     herdrSession: 'stub', workspaceId: 'w1', tabId: 'w1:t1', paneId: 'w1:p2', terminalId: 'original-terminal',
-    workerSessionId: 'original-native-session', status: 'review_pending', round: 1, history: [],
+    workerSessionId: 'original-native-session', workerStartedAt: startedAt, agentName: 'cbc-old',
+    status: 'review_pending', round: 1, history: [],
     submission: { status: 'observed' }, skipPermissions: false, permissionMode: 'acceptEdits', model: null, effort: null,
     taskSpec: normalizeTaskSpec({ goal: 'Fixture work', background: 'Fixture project', inputs: [{ path: 'README.md', purpose: 'Fixture contract' }],
       allowedChanges: ['result.txt'], requirements: ['Use original context'], acceptance: [{ command: 'node verify.cjs', expected: 'exit 0' }], deliverables: ['result.txt'] }) };
@@ -30,10 +38,14 @@ function fixture() {
     placement: { mode: 'tab', workspaceId: 'w1' } };
   delete next.workerSessionId;
   const calls = [];
-  const options = { inspect: () => ({ agent: 'codebuddy', agent_status: 'idle', terminal_id: source.terminalId }),
+  const native = { pane_id: source.paneId, agent: 'codebuddy', name: source.agentName,
+    terminal_id: source.terminalId, agent_session: { value: source.workerSessionId },
+    agent_status: 'idle', completion_seq: 8 };
+  const options = { inspect: () => native,
     attest: () => ({ sessionId: source.workerSessionId }),
-    call: (_session, args) => { calls.push(args); return args[0] === 'agent' && args[1] === 'list' ? { result: { agents: [] } } : {}; } };
-  return { source, next, options, calls, sourceBytes: fs.readFileSync(path.join(dir, 'tasks', source.id, 'task.json')) };
+    call: (_session, args) => { calls.push(args); return args[1] === 'list' ? { result: { agents: [], panes: [] } } : {}; } };
+  return { source, next, options, calls, native, cbcShim, cbcScript, appData,
+    sourceBytes: fs.readFileSync(path.join(dir, 'tasks', source.id, 'task.json')) };
 }
 
 test('actual cancelled task overrides a stale review_pending ledger for CBC identity reuse only', () => {
@@ -77,7 +89,8 @@ test('project, key, session ID, live terminal and watcher checks remain strict',
     f => { f.next.workerKey = 'other-key'; },
     f => { delete f.source.workerSessionId; saveTask(f.source); },
     f => { f.source.watcherPid = process.pid; saveTask(f.source); },
-    f => { f.options.attest = () => ({ sessionId: 'wrong-native' }); },
+    f => { f.options.inspect = () => { const { agent_session, ...agent } = f.native; return agent; };
+      f.options.attest = () => ({ sessionId: 'wrong-native' }); },
     f => { f.options.inspect = () => ({ agent: 'codebuddy', agent_status: 'idle', terminal_id: 'wrong-terminal' }); },
     f => { f.options.inspect = () => ({ agent: 'codebuddy', agent_status: 'working', terminal_id: f.source.terminalId }); },
   ]) {
@@ -106,8 +119,8 @@ test('another unresolved native owner and a moved live terminal block continuati
   assert.throws(() => tryReuseContext(f.next, f.options), /another unresolved owner/);
   const g = fixture(); g.next.resumeFromTaskId = g.source.id;
   g.options.inspect = () => { const error = new Error('closed Pane'); error.herdrCode = 'pane_not_found'; throw error; };
-  g.options.call = () => ({ result: { agents: [{ terminal_id: g.source.terminalId }] } });
-  assert.throws(() => tryReuseContext(g.next, g.options), /still present/);
+  g.options.call = () => ({ result: { panes: [], agents: [{ terminal_id: g.source.terminalId }] } });
+  assert.throws(() => tryReuseContext(g.next, g.options), /present/);
 });
 
 test('explicit original-session mode does not apply to ZCode or explicit new-session requests', () => {
@@ -117,23 +130,68 @@ test('explicit original-session mode does not apply to ZCode or explicit new-ses
   assert.throws(() => tryReuseContext(f.next, f.options), /requires CBC/);
 });
 
-test('actual dispatch CLI carries resume-task through the original live CBC binding with exactly one submission', () => {
+for (const mode of ['working', 'fast-hook', 'rejected-then-resume']) test(`actual CBC CLI with optional Herdr metadata submits once (${mode})`, () => {
+  const finishImmediately = mode === 'fast-hook';
   const f = fixture(), transport = path.join(f.source.stateDir, 'transport.json'), specFile = path.join(f.source.stateDir, 'spec.json');
   fs.writeFileSync(specFile, JSON.stringify(f.source.taskSpec));
-  fs.writeFileSync(path.join(f.source.stateDir, 'hook-events.ndjson'), JSON.stringify({ herdrSession: 'stub', paneId: f.source.paneId,
-    sessionId: f.source.workerSessionId, taskId: f.source.id, timestamp: new Date().toISOString() }) + '\n');
-  fs.writeFileSync(transport, JSON.stringify({ agent: f.options.inspect(), calls: [], submissions: 0 }));
-  const result = spawnSync(process.execPath, ['--require', path.join(__dirname, 'fixtures/cbc-terminal-preload.cjs'),
-    path.join(__dirname, '../bin/agent-bridge.js'), 'dispatch', '--agent', 'cbc', '--task-id', f.next.id,
-    '--cwd', f.source.cwd, '--session', 'stub', '--workspace', 'w1', '--worker-key', 'input-sim',
-    '--resume-task', f.source.id, '--spec-file', specFile, '--no-skip-permissions', '--codex-thread', 'fixture-thread'],
-  { env: { ...process.env, AGENT_BRIDGE_STATE_DIR: f.source.stateDir, CBC_TERMINAL_TEST_STATE: transport },
+  const hook = { herdrSession: 'stub', paneId: f.source.paneId, terminalId: f.source.terminalId,
+    sessionId: f.source.workerSessionId, taskId: f.source.id, round: f.source.round,
+    name: 'Stop', source: 'stop', identityBound: true, timestamp: new Date().toISOString() };
+  fs.writeFileSync(path.join(f.source.stateDir, 'hook-events.ndjson'), `${JSON.stringify(hook)}\n`);
+  const shellPid = 51001;
+  const processStartedAt = new Date(Date.now() - 30_000).toISOString();
+  const publicAgent = { ...f.native, state_change_seq: mode === 'rejected-then-resume' ? -1 : 1200 };
+  delete publicAgent.agent_session;
+  delete publicAgent.completion_seq;
+  fs.writeFileSync(transport, JSON.stringify({ agent: publicAgent, finishImmediately, currentTaskId: f.next.id,
+    pane: { pane_id: f.source.paneId, terminal_id: f.source.terminalId, workspace_id: f.source.workspaceId },
+    panes: [{ pane_id: f.source.paneId, terminal_id: f.source.terminalId, workspace_id: f.source.workspaceId }],
+    processInfo: { shell_pid: shellPid, foreground_processes: [
+      { pid: shellPid, name: 'pwsh.exe', creationTime: processStartedAt },
+    ] },
+    visibleText: 'CodeBuddy ready for the next task', nodePid: 51002, processStartedAt,
+    nodeExecutable: process.execPath, cbcScript: f.cbcScript,
+    calls: [], submissions: 0, paneRuns: [], processProofCalls: 0 }));
+  const run = args => spawnSync(process.execPath, ['--require', path.join(__dirname, 'fixtures/cbc-terminal-preload.cjs'),
+    path.join(__dirname, '../bin/agent-bridge.js'), ...args],
+  { env: { ...process.env, AGENT_BRIDGE_STATE_DIR: f.source.stateDir, CBC_TERMINAL_TEST_STATE: transport,
+    AGENT_BRIDGE_CBC: f.cbcShim, AGENT_BRIDGE_CBC_NATIVE: f.cbcShim },
     encoding: 'utf8', timeout: 10000, windowsHide: true });
+  let result = run(['dispatch', '--agent', 'cbc', '--task-id', f.next.id,
+    '--cwd', f.source.cwd, '--session', 'stub', '--workspace', 'w1', '--worker-key', 'input-sim',
+    '--resume-task', f.source.id, '--spec-file', specFile, '--no-skip-permissions', '--codex-thread', 'fixture-thread']);
+  let rejected;
+  if (mode === 'rejected-then-resume') {
+    assert.equal(result.status, 1);
+    const failed = loadTask(f.next.id);
+    assert.equal(failed.status, 'failed'); assert.equal(failed.round, 0);
+    rejected = { file: failed.lastSubmissionRejection.file, bytes: fs.readFileSync(failed.lastSubmissionRejection.file) };
+    assert.equal(JSON.parse(rejected.bytes).status, 'rejected-before-input');
+    const state = JSON.parse(fs.readFileSync(transport));
+    assert.equal(state.submissions, 0);
+    state.agent.state_change_seq = 1200; state.calls = [];
+    fs.writeFileSync(transport, JSON.stringify(state));
+    result = run(['resume', f.next.id]);
+  }
   assert.equal(result.status, 0, result.stderr);
   const next = loadTask(f.next.id), state = JSON.parse(fs.readFileSync(transport));
   assert.equal(next.workerSessionId, f.source.workerSessionId); assert.equal(next.resumeFromTaskId, f.source.id);
   assert.equal(next.promptContext.mode, 'full'); assert.equal(next.submission.status, 'observed');
-  assert.equal(state.submissions, 1); assert.equal(state.calls.some(args => args[1] === 'run' || args[1] === 'create'), false);
+  assert.equal(next.submission.inputReceipt.transport, 'guarded-pane');
+  assert.equal(next.submission.inputReceipt.nativeAcceptanceConfirmed, false);
+  assert.equal(next.submission.baselineStateChange, 1200);
+  assert.equal(next.submission.baselineCompletion, 0);
+  assert.equal(state.submissions, 1); assert.equal(state.paneRuns.length, 1);
+  assert.equal(state.processProofCalls, 2);
+  assert.equal(state.calls.filter(args => args[0] === 'pane' && args[1] === 'run').length, 1);
+  assert.equal(state.calls.filter(args => args[0] === 'pane' && args[1] === 'list').length, 2);
+  assert.equal(state.calls.filter(args => args[0] === 'agent' && args[1] === 'list').length, mode === 'rejected-then-resume' ? 2 : 3);
+  assert.equal(state.calls.filter(args => args[0] === 'pane' && args[1] === 'process-info').length, 2);
+  assert.equal(state.calls.filter(args => args[0] === 'pane' && args[1] === 'read').length, 2);
+  assert.equal(state.calls.some(args => args[0] === 'agent' && args[1] === 'prompt'), false);
+  assert.equal(state.calls.some(args => ['create', 'start'].includes(args[1])), false);
+  assert.equal(state.calls.some(args => args[0] === 'pane' && args[1] === 'send-keys'), false);
   assert.equal(loadTask(f.source.id).status, 'cancelled');
   assert.deepEqual(fs.readFileSync(path.join(f.source.stateDir, 'tasks', f.source.id, 'task.json')), f.sourceBytes);
+  if (rejected) assert.deepEqual(fs.readFileSync(rejected.file), rejected.bytes);
 });

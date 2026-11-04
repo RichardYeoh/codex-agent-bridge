@@ -24,6 +24,31 @@ function writeScopes(task) {
 
 function overlaps(a, b) { return a === b || a.startsWith(b + path.sep) || b.startsWith(a + path.sep); }
 
+function canonical(value) {
+  const absolute = path.resolve(value);
+  return process.platform === 'win32' ? absolute.toLowerCase() : absolute;
+}
+
+function resourceScopes(task) {
+  if (!task.cwd) return null;
+  if (task.status === 'abandoned' && task.abandonment?.resourceFence?.active && task.abandonment.resourceFence.wholeProject) return [canonical(task.cwd)];
+  if (!task.allowedWritePaths?.length || task.allowedWritePaths.some(value => /[*?\[\]{}]/.test(value))) return [canonical(task.cwd)];
+  return writeScopes(task);
+}
+
+function conflict(task, other) {
+  if (task.cwd && other.cwd && sameBinding(task, other)) return 'worker context binding';
+  if (task.agent === other.agent && task.workerSessionId && task.workerSessionId === other.workerSessionId) return 'native session';
+  if (task.herdrSession === other.herdrSession
+      && (task.paneId && task.paneId === other.paneId || task.terminalId && task.terminalId === other.terminalId)) return 'Pane or terminal';
+  if (task.agent === 'zcode' && other.agent === 'zcode'
+      && (!task.zcodeBindingSha256 || !other.zcodeBindingSha256 || task.zcodeBindingSha256 === other.zcodeBindingSha256)) return 'ZCode Desktop relay';
+  const left = resourceScopes(task), right = resourceScopes(other);
+  if (!left || !right) return 'unconfirmed write scope';
+  if (left.some(a => right.some(b => overlaps(a, b)))) return 'write scope';
+  return null;
+}
+
 function assertSingleActive(candidate, tasks) {
   const id = typeof candidate === 'string' ? candidate : candidate.id;
   const entries = tasks || taskList(typeof candidate === 'object' ? candidate.stateDir : undefined);
@@ -32,18 +57,22 @@ function assertSingleActive(candidate, tasks) {
   for (const other of entries) {
     if (other.id === id) continue;
     // One context binding owns one unresolved task, including pending review. / 同一上下文绑定只持有一个未闭合任务，待验收也不能挤占。
-    if (task && UNRESOLVED.has(other.status) && sameBinding(task, other)) {
+    if (task?.cwd && other.cwd && UNRESOLVED.has(other.status) && sameBinding(task, other)) {
       throw new Error(`Worker context binding is occupied by ${other.id} (${other.status}); accept, rework, recover or cancel it first`);
     }
-    if (!EXECUTING.has(other.status)) continue;
-    if (!task?.parallel || !other.parallel) throw new Error(`Another worker task is active: ${other.id} (${other.status})`);
-    if (task.agent === 'zcode' && other.agent === 'zcode' && task.zcodeBindingSha256 === other.zcodeBindingSha256) {
-      throw new Error('One ZCode Desktop relay binding supports one terminal connection; serialize these tasks');
+    const quarantined = other.status === 'abandoned' && other.abandonment?.resourceFence?.active;
+    const uncertainFailure = other.status === 'failed' && (other.originalExecutionMayContinue
+      || other.blocker?.originalExecutionMayContinue || other.startup?.workerEffectsPossible === true);
+    if (!EXECUTING.has(other.status) && !quarantined && !uncertainFailure) continue;
+    const reason = task && conflict(task, other);
+    if (reason) throw new Error(`Worker resource conflict (${reason}) with ${other.id} (${other.status}); reconcile ownership or use a disjoint project/scope`);
+    // Default serialization is project-scoped, never a cross-project global deadlock. / 默认在项目内串行，不把其他独立项目一并锁死。
+    if (!quarantined && (!task?.cwd || !other.cwd || canonical(task.cwd) === canonical(other.cwd))
+        && (!task?.parallel || !other.parallel)) throw new Error(`Another worker task is active: ${other.id} (${other.status})`);
+    if (task?.parallel && other.parallel && (!writeScopes(task).length || !writeScopes(other).length)) {
+      throw new Error('Parallel tasks require explicit write scopes');
     }
-    const left = writeScopes(task), right = writeScopes(other);
-    if (!left.length || !right.length) throw new Error('Parallel tasks require explicit write scopes');
-    if (left.some(a => right.some(b => overlaps(a, b)))) throw new Error(`Parallel write scope overlaps ${other.id}`);
   }
 }
 
-module.exports = { taskList, assertSingleActive, writeScopes };
+module.exports = { taskList, assertSingleActive, writeScopes, conflict, resourceScopes };

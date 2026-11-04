@@ -46,6 +46,50 @@ test('many observation windows renew without blocking or resubmitting the native
   assert.equal(windows, 4); assert.equal(reconnects, 0); assert.equal(result.result.terminal, true);
 });
 
+test('an admitted but not yet visible command gets a time-based snapshot grace without history scans', async () => {
+  let clock = 0, polls = 0, refreshes = 0, historyCalls = 0;
+  const conversation = { snapshot: snapshot(), remote: { call: async () => { historyCalls++; throw new Error('history scan forbidden during startup grace'); } },
+    wait: async () => {
+      clock += 1000; polls++;
+      if (polls === 4) { conversation.snapshot = snapshot('completedSuccess'); conversation.snapshot.seq = polls; }
+    } };
+  conversation.snapshot.rows.window = [];
+  const result = await observeExecution({ getConversation: () => conversation, commandId: 'original', sessionId: 'session-test',
+    admissionConfirmed: true, unseenGraceMs: 10000, unseenPollMs: 2000, clock: () => clock,
+    refresh: async () => { refreshes++; } });
+  assert.equal(result.result.terminal, true); assert.equal(result.result.state, 'completedSuccess');
+  assert.equal(polls, 4); assert.equal(refreshes, 4); assert.equal(historyCalls, 0);
+});
+
+test('a previously seen long-running command is recovered from authoritative history after its header leaves the tail', async () => {
+  let historyCalls = 0;
+  const conversation = { snapshot: snapshot(), remote: { call: async () => {
+    historyCalls++;
+    return { atSeq: conversation.snapshot.seq, atLogEpoch: conversation.snapshot.logEpoch, hasMore: false,
+      rows: [{ kind: 'turnHeader', rowId: 1, sourceCommandId: 'original', state: 'completedSuccess' }] };
+  } }, wait: async () => { conversation.snapshot.rows.window = []; conversation.snapshot.control.activeWorks = []; } };
+  conversation.snapshot.rows.window = [];
+  conversation.snapshot.control.activeWorks = [{ sourceCommandId: 'original' }];
+  const result = await observeExecution({ getConversation: () => conversation, commandId: 'original', sessionId: 'session-test',
+    admissionConfirmed: true, initialHeaderRowId: 1, refresh: async () => {} });
+  assert.equal(result.result.terminal, true);
+  assert.equal(result.result.state, 'completedSuccess');
+  assert.equal(result.result.evidence, 'conversationRowsRangeV4');
+  assert.equal(historyCalls, 1);
+});
+
+test('accepted admission remains execution-unconfirmed after the bounded observation grace', async () => {
+  let clock = 0, historyCalls = 0;
+  const conversation = { snapshot: snapshot(), remote: { call: async () => { historyCalls++; return {
+    rows: [], hasMore: false, atSeq: conversation.snapshot.seq, atLogEpoch: conversation.snapshot.logEpoch }; } },
+    wait: async () => { clock += 5000; } };
+  conversation.snapshot.rows.window = [];
+  await assert.rejects(observeExecution({ getConversation: () => conversation, commandId: 'original', sessionId: 'session-test',
+    admissionConfirmed: true, unseenGraceMs: 6000, unseenPollMs: 5000, clock: () => clock,
+    refresh: async () => {} }), /observation grace; execution remains unconfirmed/);
+  assert.equal(historyCalls, 1);
+});
+
 test('network recovery is bounded and exclusive seat conflict never reconnects', async () => {
   let retries = 0;
   const conversation = { snapshot: snapshot(), remote: {}, wait: async () => { throw new Error('network disconnected'); } };
@@ -131,5 +175,14 @@ test('local seat contention stops observation and admission recovery without ret
     reconnect: async () => reconnects++, sleep: async () => {} }), { code: error.code });
   await assert.rejects(queryAdmission({ query: async () => { throw error; } }, {}, {
     reconnect: async () => reconnects++, sleep: async () => {} }), { code: error.code });
+  assert.equal(reconnects, 0);
+});
+
+test('a replaced local binding detaches observation without reconnecting to the old Pane', async () => {
+  let reconnects = 0;
+  const conversation = { snapshot: snapshot(), remote: {}, wait: async () => new Promise(() => {}) };
+  const error = Object.assign(new Error('Pane binding replaced'), { code: 'ZCODE_LOCAL_BINDING_REPLACED' });
+  await assert.rejects(observeExecution({ getConversation: () => conversation, commandId: 'original', sessionId: 'session-test',
+    checkpoint: () => { throw error; }, reconnect: async () => { reconnects++; }, sleep: async () => {} }), { code: error.code });
   assert.equal(reconnects, 0);
 });

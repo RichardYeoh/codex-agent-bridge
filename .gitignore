@@ -23,3 +23,7 @@ Thumbs.db
 *.bak
 *.backup
 coverage/
+
+# Private original audit inputs; retain unchanged locally / 原始审核输入含本机路径，原样留存本地
+/hark_yotta_review/Hark审核报告-2026-11-04.md
+/hark_yotta_review/repro/

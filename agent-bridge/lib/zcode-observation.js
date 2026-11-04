@@ -52,14 +52,23 @@ async function resolveTurn(remote, snapshot, commandId, { maxPages = 50, headerR
 // Renew wait windows; only transport faults consume bounded retries. / 自动续观察窗口，仅传输故障消耗有界重试预算。
 async function observeExecution({ getConversation, refresh, reconnect, commandId, sessionId,
   checkpoint = () => {}, timeoutMs = 1800000, maxReconnects = 5, maxUnconfirmed = 3,
-  initialHeaderRowId, sleep = pause }) {
-  let failures = 0, unconfirmed = 0, headerRowId = initialHeaderRowId;
+  initialHeaderRowId, sleep = pause, admissionConfirmed = false, unseenGraceMs = 120000,
+  unseenPollMs = 5000, clock = Date.now }) {
+  let failures = 0, unconfirmed = 0, headerRowId = initialHeaderRowId, unseenSince = null, finalAdmissionHistoryChecked = false;
   for (;;) {
     try {
       const conversation = getConversation();
       const snapshot = conversation.snapshot;
       if (snapshot.sessionId !== sessionId) throw new Error('ZCode observation session identity mismatch');
-      const result = await resolveTurn(conversation.remote, snapshot, commandId, { headerRowId });
+      const direct = turnState(snapshot, commandId);
+      // The admission ACK's startup grace avoids paging before a turn header is first visible. / 准入回执后的启动宽限期避免在轮次头首次出现前翻阅历史。
+      // Once an exact header was seen, disappearance from the tail with no active work requires authoritative history reconciliation. / 一旦见过精确轮次头，且活动记录消失、尾窗也不再含该头，必须通过权威历史重新对账。
+      let result;
+      if (admissionConfirmed && !direct.seen && headerRowId === undefined) result = direct;
+      else if (admissionConfirmed && direct.seen) result = { ...direct, evidence: 'snapshot', seq: snapshot.seq, logEpoch: snapshot.logEpoch };
+      else if (admissionConfirmed && !snapshot.control.activeWorks?.some(work => work.sourceCommandId === commandId)) {
+        result = await resolveTurn(conversation.remote, snapshot, commandId, { headerRowId });
+      } else result = await resolveTurn(conversation.remote, snapshot, commandId, { headerRowId });
       if (result.header) headerRowId = result.header.rowId;
       if (headerRowId !== undefined) result.headerRowId = headerRowId;
       checkpoint({ result, snapshot });
@@ -68,9 +77,35 @@ async function observeExecution({ getConversation, refresh, reconnect, commandId
           || snapshot.queue?.items?.length)) return { result, snapshot, foreignWork: true };
       if (result.terminal) return { result, snapshot };
       if (!result.seen) {
+        if (admissionConfirmed) {
+          unseenSince ??= clock();
+          const remaining = unseenGraceMs - (clock() - unseenSince);
+          if (remaining <= 0) {
+            if (!finalAdmissionHistoryChecked) {
+              finalAdmissionHistoryChecked = true;
+              const reconciled = await resolveTurn(conversation.remote, snapshot, commandId, { headerRowId });
+              if (reconciled.header) headerRowId = reconciled.header.rowId;
+              if (reconciled.headerRowId !== undefined) result.headerRowId = reconciled.headerRowId;
+              if (reconciled.seen) {
+                Object.assign(result, reconciled);
+                checkpoint({ result, snapshot });
+                if (result.terminal) return { result, snapshot };
+                if (result.seen) { unseenSince = null; unconfirmed = 0; continue; }
+              }
+            }
+            const error = new Error('ZCode accepted command has no visible work after the observation grace; execution remains unconfirmed');
+            error.code = 'ZCODE_EXECUTION_UNCONFIRMED';
+            throw error;
+          }
+          const seq = snapshot.seq;
+          try { await conversation.wait(s => s.seq > seq, Math.min(unseenPollMs, remaining)); }
+          catch (error) { if (error.code !== 'ZCODE_OBSERVATION_WINDOW') throw error; }
+          await refresh(); continue;
+        }
         if (++unconfirmed >= maxUnconfirmed) throw new Error('ZCode submission_unconfirmed; no terminal evidence for original command');
         await sleep(1000 * unconfirmed); await refresh(); continue;
       }
+      unseenSince = null;
       unconfirmed = 0;
       const previousSeq = snapshot.seq;
       try {
@@ -81,7 +116,9 @@ async function observeExecution({ getConversation, refresh, reconnect, commandId
       }
       failures = 0;
     } catch (error) {
-      if (error.code === 'ZCODE_RELAY_LOCAL_BUSY' || /KICKED|AUTH_FAILED|WRONG_PARAM|identity mismatch|submission_unconfirmed/.test(error.message)
+      if (error.code === 'ZCODE_RELAY_LOCAL_BUSY' || error.code === 'ZCODE_EXECUTION_UNCONFIRMED'
+          || error.code === 'ZCODE_LOCAL_BINDING_REPLACED' || error.code === 'ZCODE_REBIND_PENDING'
+          || /KICKED|AUTH_FAILED|WRONG_PARAM|identity mismatch|submission_unconfirmed/.test(error.message)
           || failures >= maxReconnects) throw error;
       await sleep(Math.min(1000 * 2 ** failures++, 30000));
       // Release the old connection before acquiring the only Relay seat. / 获取唯一Relay席位前先释放旧连接。

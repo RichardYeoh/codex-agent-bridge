@@ -19,10 +19,23 @@ function fixture() {
   const calls = [];
   const info = { id: 'ses_original', location: { directory: root }, time: { idle: 123 } };
   const values = { 'session.get': info, 'session.active': {}, 'session.permission.list': [], 'session.form.list': [],
+    'session.inbox.list': [],
     'session.create': info, 'experimental.session.instructions.entry.list': [],
     'model.list': [{ providerID: 'p', id: 'm', variants: [{ id: 'max' }] }] };
   const request = (op, params, body) => { calls.push({ op, params, body }); return values[op] ?? null; };
   return { task, info, values, request, calls };
+}
+
+function addCurrentAdmission(f) {
+  f.task.round = 1; f.task.status = 'running'; f.task.terminalId = 'terminal-original';
+  f.task.history = [{ round: 1, status: 'submitted', timestamp: new Date().toISOString() }];
+  const dir = path.join(root, 'tasks', f.task.id); fs.mkdirSync(dir, { recursive: true });
+  const id = 'msg_bridge_fixture';
+  fs.writeFileSync(path.join(dir, 'round-001-opencode-admission.json'), JSON.stringify({
+    id, sessionId: f.task.workerSessionId, round: f.task.round, status: 'confirmed', timestamp: new Date().toISOString(),
+  }));
+  f.values['session.message.list'] = [{ id, type: 'user' }];
+  return id;
 }
 
 test('OpenCode preflight verifies exact restored ID without model prompts or global config writes', () => {
@@ -52,6 +65,7 @@ test('OpenCode validates model variants against catalog instead of assuming max 
 test('OpenCode distinguishes active, pending approval, failure and confirmed interruption', () => {
   const f = fixture(); f.values['session.active'] = { ses_original: { type: 'running' } };
   assert.equal(snapshot(f.task, f.request).state, 'working');
+  addCurrentAdmission(f);
   assert.throws(() => interrupt(f.task, f.request), /not confirmed/);
   f.values['session.permission.list'] = [{ id: 'permission-example' }];
   assert.equal(snapshot(f.task, f.request).reason, 'user_input_required');

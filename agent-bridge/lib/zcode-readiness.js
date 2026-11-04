@@ -10,6 +10,11 @@ const { queryAdmission, resolveTurn } = require('./zcode-observation');
 
 const protocol = 1;
 const envelopeDigest = envelope => envelope ? crypto.createHash('sha256').update(JSON.stringify(envelope)).digest('hex') : null;
+function sendControlLine(task, line, send = api) {
+  send(task.herdrSession, ['pane', 'send-keys', task.paneId, 'ctrl+u']);
+  send(task.herdrSession, ['pane', 'send-text', task.paneId, line]);
+  send(task.herdrSession, ['pane', 'send-keys', task.paneId, 'enter']);
+}
 function files(task) {
   const root = taskDir(task.id);
   return { journal: path.join(root, `round-${String(task.round).padStart(3, '0')}-zcode-command.json`),
@@ -29,7 +34,7 @@ function matches(left, right) { return !!right && Object.entries(left).every(([k
 function failedAdmission(journal) {
   return journal?.envelope?.type === 'sendText' && journal.ack?.commandId === journal.envelope.commandId
     && ['failed', 'rejected'].includes(journal.ack.status) && typeof journal.ack.reasonCode === 'string'
-    && journal.ack.reasonCode.length > 0 && !journal.ack.result;
+    && journal.ack.reasonCode.length > 0 && journal.ack.reasonCode !== 'runtimeFailure' && !journal.ack.result;
 }
 function assertQuiescent(task, snapshot) {
   const c = snapshot?.control;
@@ -53,7 +58,7 @@ async function verifyNativeReady(task, journal, remote, conversation) {
   if (journal) {
     // Only an exact read-only inbox query can resolve admission uncertainty. / 仅原命令的精确只读inbox查询可解除准入不确定性。
     const ack = await queryAdmission(remote, journal.envelope, { attempts: 1 });
-    if (['failed', 'rejected'].includes(ack.status) && ack.reasonCode && !ack.result) {
+    if (failedAdmission({ envelope: journal.envelope, ack })) {
       previous = { state: 'failed', reason: ack.reasonCode, evidence: 'command-inbox', admissionStatus: ack.status };
     } else if (['accepted', 'duplicate'].includes(ack.status)) {
       const turn = await resolveTurn(remote, conversation.snapshot, journal.envelope.commandId);
@@ -128,8 +133,7 @@ async function refreshWorker(task, { forSubmission = false } = {}, { inspect = a
   writeJsonAtomic(target.request, request);
   let transportError;
   try {
-    send(task.herdrSession, ['pane', 'send-text', task.paneId, ':prepare-retry:' + request.requestId]);
-    send(task.herdrSession, ['pane', 'send-keys', task.paneId, 'enter']);
+    sendControlLine(task, ':prepare-retry:' + request.requestId, send);
   } catch (error) { transportError = error; }
   // A lost terminal-input reply must never cause a second delivery. / 终端输入回执丢失不得触发第二次投递。
   while (clock() < request.expiresAt) {
@@ -147,4 +151,5 @@ async function refreshWorker(task, { forSubmission = false } = {}, { inspect = a
   throw new Error('ZCode readiness not acknowledged; no business prompt sent' + (transportError ? ' (terminal transport uncertain)' : ''));
 }
 
-module.exports = { protocol, envelopeDigest, files, binding, matches, failedAdmission, assertQuiescent, verifyNativeReady, validateProof, assertLocal, refreshWorker };
+module.exports = { protocol, envelopeDigest, files, binding, matches, failedAdmission, assertQuiescent, verifyNativeReady,
+  validateProof, assertLocal, refreshWorker, sendControlLine };

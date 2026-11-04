@@ -1,5 +1,9 @@
 # CBC终态会话接续与取消核对
 
+## 当前补充（2026-11-04）
+
+Hark整改后，首次ZCode cancel也不再调用无法按command条件核实的全局stop；CBC/AGY登记执行端仍存活时同样不盲发Esc。关闭原生执行端后的精确证明、终态对账和保留资源隔离的abandon出口见[异常恢复与资源隔离](异常恢复与资源隔离.md)。以下11-03的“首次cancel行为不变”属于当日实现历史，不作为当前命令说明。
+
 ## 适用范围
 
 2026-11-03补充CBC已取消任务的原生会话接续，以及旧ZCode任务在Pane缺失时的取消确认。技术验收状态、执行会话身份和取消请求分别处理。维护验证仅使用隔离传输；真实业务恢复由原主控执行。
@@ -51,3 +55,15 @@ node $bridge status <旧ZCode任务ID>
 修复先前即使已有明确拒绝回执仍强制配对的疏漏。新增6项测试，相关取消与CBC接续34/34；全量236项中235通过、1跳过，既有验收8/8。新增覆盖Desktop配对超时条件下零连接收口、错误/缺失/接纳/未知回执拒绝、活动和身份/租约冲突拒绝、旧保守不确定投影以及真实协调器CLI隔离调用。测试均不连接远端模型。
 
 真实旧任务只读核对已返回confirmed=true/source=persisted-command-ack，说明具备离线收口证据；维护未执行业务recover或派单，不能把该只读结果记为任务已cancelled。由原业务主控在原状态根执行上述recover，再核实status为cancelled后按正式CBC原会话接续流程派单。无需重新打开ZCode。证据位于.local/zcode-offline-cancel-20261103。
+
+## 2026-11-04持久化执行终态失败的离线收口
+
+补充已获准执行后失败的原命令：当前轮命令journal为terminal/failed、接纳回执精确匹配，且同轮观测包含同session/command/Pane/terminal的权威turnHeader及failed终态、结束时间、行号、seq和logEpoch，才具备终态证明。provider错误码和文字本身不构成证据；错误的recoverable标记也不推翻明确的终态头。
+
+该分支还要求本地watcher与绑定worker均已退出；Herdr原Pane明确pane_not_found，现有Pane列表没有原terminal或同原生会话；无其他任务或租约占用。取消中断留下的stop_unconfirmed/null command投影仅在其他身份均匹配、worker已退出时允许作为无确定执行结论的旧投影，不能覆盖原命令的权威终态。较新的command、working或untracked_command_active一律拒绝。
+
+证据齐全后，正式recover或已有cancel_pending的cancel不连接Desktop，按公共取消模块确认cancelled，证据source为persisted-terminal-failure。落盘前再次检查任务/轮次/命令、证据摘要及本地关闭条件；过程中身份或终态变化则拒绝。仅证明原命令已经失败结束，不声称远端整个会话空闲；不重发、不stop、不createSession，也不技术accept。
+
+新增7项测试，相关取消32/32；全量258项中257通过、1跳过，既有验收8/8。覆盖旧轮/命令/会话证据拒绝、非权威终态拒绝、活动/租约/并发替换保护、Pane移动/重新附着/权限拒绝，以及隔离CLI仅用本地只读Pane查询收口。
+
+本次受明确授权，在独立验证状态根执行一次官方recover，实际退出0并将r2取消请求收口为cancelled；原生绑定、任务规格及旧历史保留，r1/r2命令、观测和worker状态摘要不变。只读串行准入检查通过，没有派CBC或操作EDA/生产文件。私有实际命令、回执及保留性证据位于.local/zcode-terminal-cancel-20261104；完成结果仅入队给原独立验证线程，不resume。

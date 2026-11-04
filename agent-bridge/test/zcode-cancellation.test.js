@@ -24,6 +24,9 @@ function fixture() {
     status: 'acknowledged', ack: { status: 'failed', commandId: 'old-command', reasonCode: 'modelUnavailable' } };
   const snapshot = { ...structuredClone(require('./fixtures/zcode-snapshot.json')), sessionId: task.workerSessionId };
   saveTask(task); writeJsonAtomic(files(task).journal, journal);
+  writeJsonAtomic(path.join(dir, 'tasks', task.id, 'zcode-state.json'), { taskId: task.id, round: task.round,
+    sessionId: task.workerSessionId, paneId: task.paneId, terminalId: task.terminalId,
+    commandId: journal.envelope.commandId, state: 'blocked', reason: 'modelUnavailable', workerPid: 99999991 });
   const calls = [], remote = new EventEmitter();
   remote.connect = async () => { calls.push('connect'); };
   remote.attachProject = async (_cwd, options) => { assert.equal(options.create, false); calls.push('attach'); };
@@ -142,7 +145,7 @@ test('a conservative old unconfirmed projection is not positive execution eviden
   const f = offlineFixture();
   const state = { taskId: f.task.id, round: f.task.round, sessionId: f.task.workerSessionId,
     commandId: f.journal.envelope.commandId, paneId: f.task.paneId, terminalId: f.task.terminalId,
-    state: 'blocked', reason: 'startup_failed', originalExecutionMayContinue: true };
+    state: 'blocked', reason: 'startup_failed', originalExecutionMayContinue: true, workerPid: 99999991 };
   writeJsonAtomic(path.join(path.dirname(files(f.task).journal), 'zcode-state.json'), state);
   writeJsonAtomic(path.join(path.dirname(files(f.task).journal), 'round-001-zcode-observation.json'),
     { ...state, phase: 'draft', result: { seen: false, terminal: false, evidence: 'history-unconfirmed' } });

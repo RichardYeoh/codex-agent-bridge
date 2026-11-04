@@ -9,8 +9,10 @@ const { assertWorker } = require('./worker');
 const { leaseForEvent } = require('./worker-lease');
 
 const ID = /^[a-z][a-z0-9-]{2,63}$/;
+const MAX_MESSAGE_BYTES = 32_768;
 const BINDING = ['taskId', 'round', 'agent', 'herdrSession', 'workerSessionId', 'paneId', 'terminalId'];
-const FINAL = new Set(['accepted']);
+const FINAL = new Set(['accepted', 'blocked', 'operator-retired']);
+const RETIRABLE_TASK_STATES = new Set(['review_pending', 'failed', 'delivery_missing', 'cancelled']);
 
 function binding(task) {
   return { taskId: task.id, round: task.round, agent: task.agent, herdrSession: task.herdrSession,
@@ -27,6 +29,7 @@ function saveMessage(task, message, status, evidence) {
   message.status = status; message.updatedAt = now();
   if (evidence) message.evidence = evidence;
   message.history.push({ status, timestamp: message.updatedAt, ...(evidence ? { evidence } : {}) });
+  if (FINAL.has(status)) { delete message.text; delete message.rendered; }
   writeJsonAtomic(messageFile(task, message.messageId), message);
   return message;
 }
@@ -56,6 +59,17 @@ function agyObservation(task) {
   return state;
 }
 
+function transcriptBodyMatches(content, message) {
+  const normalized = content.replace(/\r\n/g, '\n');
+  const markerIndex = normalized.indexOf(message.marker);
+  if (markerIndex < 0) return false;
+  const bodyStart = markerIndex + message.marker.length;
+  if (normalized[bodyStart] !== '\n') return false;
+  const body = normalized.slice(bodyStart + 1);
+  if (typeof message.text === 'string') return body === message.text;
+  return crypto.createHash('sha256').update(body).digest('hex') === message.bodySha256;
+}
+
 function transcriptAcceptance(task, message) {
   const state = agyObservation(task);
   if (!state?.transcriptPath) return null;
@@ -73,7 +87,7 @@ function transcriptAcceptance(task, message) {
     for (const line of lines) {
       let entry; try { entry = JSON.parse(line); } catch { continue; }
       if (entry.type === 'USER_INPUT' && typeof entry.content === 'string'
-          && entry.content.includes(message.marker) && entry.content.replace(/\r\n/g, '\n').includes(message.text)) {
+          && transcriptBodyMatches(entry.content, message)) {
         return { type: 'native_transcript', stepIndex: entry.step_index, nativeSource: entry.source || null,
           currentRound: message.round, observedAt: now() };
       }
@@ -89,7 +103,8 @@ function terminalText(task, call = api) {
   return typeof response === 'string' ? response : value?.read?.text || value?.text || '';
 }
 function hasDialog(text) {
-  return /permission required|needs? (?:your )?approval|allow once|always allow|trust this folder|do you trust|select (?:a |an )?(?:model|option)|choose (?:an? )?option|settings|configuration|\besc\s+(?:to )?cancel/i.test(text);
+  const visibleTail = text.split(/\r?\n/).filter(line => line.trim()).slice(-12).join('\n');
+  return /permission required|needs? (?:your )?approval|allow once|always allow|trust this folder|do you trust|do you want to (?:allow|approve)|select (?:a |an )?(?:model|option)|choose (?:an? )?option/i.test(visibleTail);
 }
 
 async function reconcile(task, id, deps = {}) {
@@ -113,7 +128,7 @@ async function reconcile(task, id, deps = {}) {
 async function deliver(task, { id, mode, text, waitMs = 15000 }, deps = {}) {
   if (task.agent !== 'agy') throw new Error('Verified live message delivery currently supports agy only; no generic shortcut fallback');
   if (!['queue', 'immediate'].includes(mode)) throw new Error('Explicit --mode queue or immediate is required');
-  if (typeof text !== 'string' || !text.trim() || Buffer.byteLength(text) > 32768) throw new Error('Message must contain 1-32768 UTF-8 bytes');
+  if (typeof text !== 'string' || !text.trim() || Buffer.byteLength(text) > MAX_MESSAGE_BYTES) throw new Error('Message must contain 1-32768 UTF-8 bytes');
   if (!Number.isSafeInteger(waitMs) || waitMs < 0 || waitMs > 60000) throw new Error('--wait-ms must be 0-60000');
   if (['accepted', 'cancelled', 'cancel_pending'].includes(task.status)) throw new Error('Cannot deliver to a settled or cancelling task');
   text = text.trim().replace(/\r\n/g, '\n');
@@ -150,20 +165,30 @@ async function deliver(task, { id, mode, text, waitMs = 15000 }, deps = {}) {
       return messageLock(task, id, () => saveMessage(task, readMessage(task, id), 'blocked', { type: 'unverified_tui_profile', inputWritten: false }));
     }
     const call = deps.call || api;
+    let promptAttempted = false;
     try {
       if (hasDialog(terminalText(task, call))) return messageLock(task, id, () => saveMessage(task, readMessage(task, id), 'blocked', { type: 'dialog_visible', inputWritten: false }));
       await messageLock(task, id, () => {
         const current = readMessage(task, id); current.transport = 'tui'; current.attemptedAt = now();
         return saveMessage(task, current, 'writing');
       });
-      call(task.herdrSession, ['pane', 'send-text', task.paneId, message.rendered]);
-      await messageLock(task, id, () => saveMessage(task, readMessage(task, id), 'text_written', { type: 'terminal_write_ack' }));
       const live = verify(task, deps);
-      if (live.agent_status === 'blocked' || hasDialog(terminalText(task, call))) throw new Error('Dialog appeared after text write; submit key not sent');
-      call(task.herdrSession, ['pane', 'send-keys', task.paneId, 'enter']);
-      await messageLock(task, id, () => saveMessage(task, readMessage(task, id), 'submitted', { type: 'terminal_submit_ack', nativeAcceptanceConfirmed: false }));
+      if (live.agent_status === 'blocked') {
+        return messageLock(task, id, () => saveMessage(task, readMessage(task, id), 'blocked', { type: 'preflight_blocked', inputWritten: false }));
+      }
+      // The server validates that the agent still owns the Pane and rejects blocked agents without sending terminal keys. / 服务端核验Agent仍控制Pane，并在阻塞时拒绝输入，不向终端盲发按键。
+      promptAttempted = true;
+      call(task.herdrSession, ['agent', 'prompt', task.paneId, message.rendered]);
+      await messageLock(task, id, () => saveMessage(task, readMessage(task, id), 'submitted', { type: 'agent_prompt_ack', nativeAcceptanceConfirmed: false }));
     } catch (error) {
-      await messageLock(task, id, () => saveMessage(task, readMessage(task, id), 'uncertain', { type: 'transport_or_state_uncertain', message: 'Inspect native state; no automatic resend' }));
+      const blockedWithoutInput = ['agent_blocked', 'blocked'].includes(error.herdrCode || error.code);
+      if (blockedWithoutInput || !promptAttempted) {
+        await messageLock(task, id, () => saveMessage(task, readMessage(task, id), 'blocked', {
+          type: blockedWithoutInput ? 'agent_prompt_blocked' : 'preflight_failed', inputWritten: false,
+        }));
+      } else {
+        await messageLock(task, id, () => saveMessage(task, readMessage(task, id), 'uncertain', { type: 'transport_or_state_uncertain', message: 'Inspect native state; no automatic resend' }));
+      }
     }
   }
   const deadline = Date.now() + waitMs;
@@ -194,9 +219,50 @@ async function injectAgy(task, input, response) {
 function assertMessagesSettled(task) {
   if (!fs.existsSync(messageDir(task))) return;
   const pending = fs.readdirSync(messageDir(task)).filter(name => name.endsWith('.json')).map(name => readJson(path.join(messageDir(task), name)))
-    .filter(message => message.round === task.round && !['accepted', 'blocked'].includes(message.status));
-  if (pending.length) throw new Error('Unconfirmed live messages remain; reconcile before accepting or starting another round');
+    .filter(message => message.round === task.round && !FINAL.has(message.status));
+  if (pending.length) throw new Error('Unconfirmed live messages remain; reconcile or explicitly retire them after checking native state');
+}
+
+function requiredAuditText(value, name, maximumBytes) {
+  if (typeof value !== 'string' || !value.trim() || Buffer.byteLength(value) > maximumBytes) {
+    throw new Error(`${name} must contain 1-${maximumBytes} UTF-8 bytes`);
+  }
+  return value.trim();
+}
+
+async function retireMessage(task, id, { reason, evidence, actor } = {}) {
+  if (!RETIRABLE_TASK_STATES.has(task.status) || task.originalExecutionMayContinue === true
+      || task.blocker?.originalExecutionMayContinue === true || task.cancellation?.phase === 'pending') {
+    throw new Error('Message retirement requires a stopped task awaiting review or a terminal task');
+  }
+  const audit = {
+    type: 'operator-retirement',
+    actor: requiredAuditText(actor, 'actor', 256),
+    reason: requiredAuditText(reason, 'reason', 1024),
+    evidence: requiredAuditText(evidence, 'evidence', 4096),
+  };
+  return messageLock(task, id, () => {
+    const message = readMessage(task, id);
+    if (message.taskId !== task.id || message.round !== task.round) {
+      throw new Error('Message belongs to a different task round; inspect its original binding before retirement');
+    }
+    if (message.status === 'operator-retired') return message;
+    if (FINAL.has(message.status)) return message;
+    const resolvedAt = now();
+    audit.resolvedAt = resolvedAt;
+    audit.priorStatus = message.status;
+    audit.deliveryUncertain = message.status === 'uncertain' || message.deliveryUncertain === true;
+    message.status = 'operator-retired';
+    message.updatedAt = resolvedAt;
+    message.operatorResolution = audit;
+    message.history.push({ status: 'operator-retired', timestamp: resolvedAt, operatorResolution: audit });
+    // Keep original delivery evidence and uncertainty intact; retirement records an operator decision only. / 保留原投递证据与不确定状态，retire仅记录操作员裁决。
+    delete message.text;
+    delete message.rendered;
+    writeJsonAtomic(messageFile(task, message.messageId), message);
+    return message;
+  });
 }
 
 module.exports = { deliver, reconcile, readMessage, publicReceipt, injectAgy, assertMessagesSettled,
-  binding, matches, messageFile, messageDir, transcriptAcceptance, hasDialog };
+  binding, matches, messageFile, messageDir, transcriptAcceptance, hasDialog, retireMessage, MAX_MESSAGE_BYTES };

@@ -20,6 +20,16 @@ function hookDefinition(executable, quoted = true) {
 function ensureHooks(task) {
   const file = path.join(task.cwd, '.agents', 'hooks.json');
   const original = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
+  // Local hook bindings can reveal machine paths; warn without changing the business ignore policy. / 本机Hook绑定含机器路径，仅提示而不更改业务忽略策略。
+  const ignored = ['.agents/hooks.json', '.agents/codex-agent-bridge-agy.cjs'].every(name => {
+    const result = spawnSync('git', ['check-ignore', '--quiet', name], { cwd: task.cwd, windowsHide: true, encoding: 'utf8', timeout: 3000 });
+    return !result.error && result.status === 0;
+  });
+  if (!ignored) {
+    task.warnings ||= [];
+    const warning = 'AGY local Hook binding contains machine paths; verify .agents/hooks.json and .agents/codex-agent-bridge-agy.cjs are excluded from publication';
+    if (!task.warnings.includes(warning)) task.warnings.push(warning);
+  }
   const value = original === null ? {} : JSON.parse(original);
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Project .agents/hooks.json must be an object');
   const expected = hookDefinition();

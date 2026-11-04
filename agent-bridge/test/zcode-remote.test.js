@@ -61,8 +61,17 @@ test('native relay pairs after waiting and stops on seat conflict without reconn
     fetcher: async () => ({ ok: true, json: async () => ({ code: 0, data: { token: 'test-only-one-use' } }) }) });
   const faults = []; remote.on('fault', error => faults.push(error.message));
   assert.deepEqual(await remote.connect(), { workspaces: [] });
+  const nativeLease = remote.lease;
+  let leaseReleased = false;
+  remote.lease = { async release() {
+    await new Promise(resolve => setTimeout(resolve, 20));
+    await nativeLease.release();
+    leaseReleased = true;
+  } };
   socket.emit('message', JSON.stringify({ type: 'error', code: 'KICKED' }));
-  assert.equal(remote.closed, true); assert.deepEqual(faults, ['ZCode relay KICKED']); assert.equal(sockets, 1);
+  await remote.close();
+  assert.equal(remote.closed, true); assert.equal(leaseReleased, true);
+  assert.deepEqual(faults, ['ZCode relay KICKED']); assert.equal(sockets, 1);
 });
 
 test('uncertain RPC writes retain their command identity and are never automatically resent', async () => {
