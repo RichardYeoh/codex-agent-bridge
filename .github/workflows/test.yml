@@ -14,8 +14,25 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci --ignore-scripts
-      - run: npm test
+      - run: node --test --test-concurrency=4 agent-bridge/test/*.test.js
       - run: npm run test:e2e
+  cbc-layered:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Verify immutable release bytes
+        run: node versions/cbc-v2-0.6.0-r3/tools/prepare-layered-release.cjs --verify versions/cbc-v2-0.6.0-r3 --project-root .
+      - name: Test CBC layered release
+        working-directory: versions/cbc-v2-0.6.0-r3
+        run: node --test --test-concurrency=4 agent-bridge/test/*.test.js tools/prepare-layered-release.test.cjs tools/layered-entry-router.test.cjs
+      - name: Test delivery acceptance
+        working-directory: versions/cbc-v2-0.6.0-r3
+        run: node tools/run-e2e.cjs
   portable-core:
     runs-on: ubuntu-latest
     steps:

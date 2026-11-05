@@ -1,0 +1,264 @@
+{
+  "upstreamCommit": "3c5b227649371507ddc4eb46ac5133afe6db1cab",
+  "esbuild": "0.28.2",
+  "zod": "4.6.7",
+  "bundleSha256": "8843a3181861af8e75125f3dd022638f9a25c499b1aaa674299285341bed9951",
+  "sources": [
+    {
+      "path": "apps/zcode-cli/packages/adapters/src/auth/credential-cipher.ts",
+      "sha256": "6bac647841d0f216d2554b368bdbbbc9215a6be5ddc48d1f4bb15e71e4e462c0"
+    },
+    {
+      "path": "apps/zcode-cli/packages/adapters/src/auth/shared-credentials.ts",
+      "sha256": "d8cd4d712abd26b231b226369da98a11b9f957198e098c5949843123be157bc5"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "606c36baf38b973227273df12a74930e4b4137280eea835c5cd623aa4553c13b"
+    },
+    {
+      "path": "packages/client/src/webRemoteControlAcknowledgedRelayBatchQueue.ts",
+      "sha256": "711e2dd1a3b708485608a70885ebada3c74bbb70768b9c88478c84285f1bc209"
+    },
+    {
+      "path": "packages/client/src/webRemoteControlAcknowledgedRelayDeadline.ts",
+      "sha256": "cfdefbe73b63e46ce6f72f9ec92b389468529360686550cd259a51e8764f6296"
+    },
+    {
+      "path": "packages/client/src/webRemoteControlAcknowledgedRelayProtocol.ts",
+      "sha256": "f6187105dc01e2498179e783b2f53bb2aca58ba152999b24c6738aa8b5882a59"
+    },
+    {
+      "path": "packages/client/src/webRemoteControlAcknowledgedRelayProtocolTypes.ts",
+      "sha256": "7a366c26f10b616eb4951e0fae124cc6dd337155ff1ededaed32f92bcf589f1d"
+    },
+    {
+      "path": "packages/rpc/src/buffer.ts",
+      "sha256": "6bc6a44e6abd088f72d57616d9556d78ce078b6f3813bf75402dde386781492c"
+    },
+    {
+      "path": "packages/rpc/src/channelClient.ts",
+      "sha256": "9c5c99acfa173a2986c39619966955ddebe123c3a3882aaea3d835a73bb59068"
+    },
+    {
+      "path": "packages/rpc/src/channels.shared.ts",
+      "sha256": "d7faaf2affcb028355501e44b0c9bcbc673f7ad4f5c812cbf012d33260517586"
+    },
+    {
+      "path": "packages/rpc/src/foundation.ts",
+      "sha256": "b4874401965e7bad7e84245a2fc5960657a349b146f355ac7343562fa724da9f"
+    },
+    {
+      "path": "packages/rpc/src/serialization.ts",
+      "sha256": "e949418e1cd17cc863c147fc8d1ff15237e1b5f0cb8e3344fd2a9ccfae9d54e7"
+    },
+    {
+      "path": "packages/shared/src/attachment-source.ts",
+      "sha256": "1ab5985a30d2be53e9e3af364e04c8a902ce4a6dc3b9bcc18e8d81c227d37069"
+    },
+    {
+      "path": "packages/shared/src/bash-output-display.ts",
+      "sha256": "3dc88eb1f016259e220be9f02f07c344de51b4fed081a9cd59a40a5cd525cc0a"
+    },
+    {
+      "path": "packages/shared/src/bots.ts",
+      "sha256": "859a86ee3720e69e75670f9fe56f43a66d2248899215c2e43ac48bcbaf4bf403"
+    },
+    {
+      "path": "packages/shared/src/channel-mention.ts",
+      "sha256": "0266aa4b95b1d8d86ac41be66a7ae9e3f9be0a945c11dedba358c5892ab94ebf"
+    },
+    {
+      "path": "packages/shared/src/conversationSelection.ts",
+      "sha256": "b76e80d143f71afea20dcddee9414324c4964f1d1ef36e836a39a810a6960e75"
+    },
+    {
+      "path": "packages/shared/src/execution-output-preview.ts",
+      "sha256": "49baa10419388ea695d87458f2c0fa614bdd7cfeb57543cc7f0437403b753282"
+    },
+    {
+      "path": "packages/shared/src/highspeed.ts",
+      "sha256": "2609459989da196ccbeea37c0b931a0957146c62a1d42a1b69c8e46302e0a11d"
+    },
+    {
+      "path": "packages/shared/src/localTtft.ts",
+      "sha256": "b6f6963535fddb455bf6adcf1c82e08dd609fb2f8bf7b6398c16cd164b3b3597"
+    },
+    {
+      "path": "packages/shared/src/mcp-apps/contract.ts",
+      "sha256": "cff9fc58409e44847caca49b132405343293f37844e487c329ffb39c67d5da99"
+    },
+    {
+      "path": "packages/shared/src/mcp-apps/instance.ts",
+      "sha256": "3488a275435494df1bfd3e271086353712e11971f64aa74f54695aef02ea2612"
+    },
+    {
+      "path": "packages/shared/src/mcp-apps/resourceMime.ts",
+      "sha256": "b21b1ac738deb13ec89ce7ffd88cadb57101f4687ed20b044ff2d7ab2547ce5d"
+    },
+    {
+      "path": "packages/shared/src/mcp-apps/schemas.ts",
+      "sha256": "a74ee82c780a0ebab95f017e095edea48e9488808ad6ce04f98eeb2ab8a30a4f"
+    },
+    {
+      "path": "packages/shared/src/model-execution.ts",
+      "sha256": "1ce8abe1f9e5072cd1ea03a0c7e0e4e11f8a4c0c0a4982510f8cdcdc526ebc35"
+    },
+    {
+      "path": "packages/shared/src/model-provider-types.ts",
+      "sha256": "7136b3e33dc7274e747e14f6c66cb4acf908dc6f2d8cf2b28adfc569bee218e8"
+    },
+    {
+      "path": "packages/shared/src/model-selection.ts",
+      "sha256": "653a4671723d4a3302e84ba13f29d4d55a17e5e8082b44d54ba1f9087dbd3e44"
+    },
+    {
+      "path": "packages/shared/src/official-mcp-tool-error.ts",
+      "sha256": "74f966961b89565e035b50b93523cd643c9fe4f61cca4fab70e8c8759ef3fcc8"
+    },
+    {
+      "path": "packages/shared/src/usage-quota.ts",
+      "sha256": "d1d24da014972689fedbcb22fd97151ab46ed5462b60f7998e880546eba3fd5d"
+    },
+    {
+      "path": "packages/shared/src/usage-stats.ts",
+      "sha256": "bf0ee2afd42bd9f9dd1e3a44babcd3fc664ad9c572e8d7dfb6e466db2c857c6b"
+    },
+    {
+      "path": "packages/shared/src/web-remote-control-rpc-transport.ts",
+      "sha256": "cf2db19c74752194282f6c886c9f3cd5551989a713ef2f887877c9295d352e23"
+    },
+    {
+      "path": "packages/shared/src/zcode-agent-policy.ts",
+      "sha256": "a6ca9b6deaa62ee1930848bb71e08304bb702c7f0da52ace69240d29903b7800"
+    },
+    {
+      "path": "packages/shared/src/zcode-media-policy.ts",
+      "sha256": "47ccb08304cf2a24f4795dc6ded2ef5712d1ee1bad5c8bffb4d6081dc86dcde1"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-legacy-types.ts",
+      "sha256": "c2ea249353347f1a1d1e6ec056e48d4460b6ee506c8a8c213de3385a9cf97719"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/apply.ts",
+      "sha256": "66c5d9d498b33ab0c91908ce914062610f7b39c083f094d4ed21cac8c0d70ab9"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/attachment-ref.ts",
+      "sha256": "aac64e061641380dbfa3df523a9c84eac5c485e6bec770723480e005a7107c52"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/core.ts",
+      "sha256": "97750a7bab0a7580c1d27c8e0155981786fdbfa07373d46c77829f25eb407a39"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/create-workflow-display.ts",
+      "sha256": "36b7a25a38bc75708cd4c0017728ce81506a572fa7d1a317ba343d0e32ff246a"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/cuaPermission.ts",
+      "sha256": "b9e3f0aaad5b356f2add8461fe4b3b1813fc3ea7991499df593606429a062d99"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/delta.ts",
+      "sha256": "6a6e73d341d0d7bf78da5e95844ed3f329ecba56eb39880f295840fc6b77c2ae"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/input-intent.ts",
+      "sha256": "6ee238b780411c6d0364e042d547d98c5efe740ebc84580020e6336016431243"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/rows.ts",
+      "sha256": "4a103cd75457586744d1429e0c31ef5f36df4da76af06512881f4d9ea0fe84ee"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/session-config.ts",
+      "sha256": "9a261de2b2c5bfc7d6cf8dd10598a9dc681bc54dbe1b46e753cf9909fd9b51a0"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/sessions-index-workflow-activity.ts",
+      "sha256": "77a1a21c55f0721bccad6c9649230c313f164205a8ffbe3b76859573aa64e4b1"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/sessions-index.ts",
+      "sha256": "c5630942ded63f26838b75f3dc1966acbe299095a9ef9ab39d25d879f0a771c6"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/shared-context-import.ts",
+      "sha256": "fcd422a4cb073af2ed2d4e74862e8360f14a7a94f58a736d7a3e09110f88f5de"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/shared-context-ref.ts",
+      "sha256": "660f6beb529f853660994f22a56149761cb7c775abb3ea047b3fdd5518294c76"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/snapshot.ts",
+      "sha256": "0883d7e7b7759d3d08fb910ad45dbfbf10d4c68fa3cce3409ad89efa7678ff59"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/submission.ts",
+      "sha256": "aba9b3d2140065615398429fe1404806b453ae5d854dce05e7c3b4271b0b3c57"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/toolDisplay.ts",
+      "sha256": "843ecf6e3d99e8ae602b8a9b106d966f42cfd4d8bd339fc180443737ba8ab964"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/transport.ts",
+      "sha256": "1e810aecdb469054e998bd789b6fa28558082782e4119a60ac7342d2969f3326"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/wire-assembler.ts",
+      "sha256": "2ec210289bce920de3ebdb2dec324764ecd1b3d2620d185ea484f2ba7a2c6be1"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/wire-binary.ts",
+      "sha256": "28f287c5764d3d7afa56b6291e3cc67f4234ccb5749f365a66cc7260ddcfbfee"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/wire-codec.ts",
+      "sha256": "ac2494a3acc795c809c94ee9393f50271a9c2a0fd33813459e5ab93842ceef75"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/wire-fault.ts",
+      "sha256": "b4e83c916358d395b725c603292ab99cc5e800eb6abbe5cea3f6c1df5f72aa6a"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/wire.ts",
+      "sha256": "b7dbb4556fdf10a3e9cc1dfe81ffe5a74d7dc05904db71efe18ecc7e96ee489a"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/workflow-artifacts.ts",
+      "sha256": "9f7c6d7ab87ba54b36923b1dd6553d0dc5e83c1f27633ff507ec2b3d7d276d31"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/workflow-observation-display.ts",
+      "sha256": "4b21c1e4cbd10ca616c6a590cf1a44dab773a4458a2ec3e8bafee43dbc3466f5"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/workflow-row-meta.ts",
+      "sha256": "033284846970c574986c3266a95c609c920eb34463f2a7314071bc78c8802524"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/workflow-runs-delta.ts",
+      "sha256": "c922fa7df8ae3e16e3e127babadaad379498c8066bd9fcb254fefb30d5a60965"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/workflow-runs.ts",
+      "sha256": "f4cdba0b631468efaeba11f8f1a9dec03d7ff7896d00f145f68ea88812d7f9b5"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/workspace-config.ts",
+      "sha256": "18052d64bbdfe4d575f8997b0ed7b5dbefb4d6a73bdd2483f876ff5b67d200a7"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol-v4/workspace-hook-review.ts",
+      "sha256": "ff8b264a361862e5575145e635c0fa108a2ac7d82091764713e0a40b17a36ce7"
+    },
+    {
+      "path": "packages/shared/src/zcode-protocol/trace.ts",
+      "sha256": "8d91e253aab67fed52e5b0e628126afad50a7ccdccc03a738c2c89f7460c417b"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Herdr 外部任务委派"
+  short_description: "通过 Herdr 委派 CBC、ZCode、agy 或 OpenCode，核实会话并按真实交付验收"
+  default_prompt: "使用 $delegate-worker，在实际主控工具上下文核实所需权限与IPC后编写任务规格，委派给指定的 CBC、ZCode、agy 或 OpenCode；复用已核实的上下文，收到通知后独立验收。权限不足不自动扩大授权。"

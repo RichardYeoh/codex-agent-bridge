@@ -1,0 +1,145 @@
+{
+  "commandIssuedAt": 1793814042035,
+  "expectedTurn": {
+    "seen": true,
+    "terminal": true,
+    "state": "completedSuccess",
+    "header": {
+      "rowId": 1,
+      "turnId": "own-turn",
+      "entityId": "own-turn",
+      "productTurnId": "own-turn",
+      "visibility": "visible",
+      "createdAt": 1793814042848,
+      "createdAtSeq": 4,
+      "actions": {
+        "canRewindFiles": true
+      },
+      "kind": "turnHeader",
+      "origin": "userInput",
+      "executionKind": "agent",
+      "sourceCommandId": "own-command",
+      "historyRoundCount": 38,
+      "state": "completedSuccess",
+      "startedAt": 1793814042848,
+      "endedAt": 1793816229805,
+      "activeMs": 2187448,
+      "outputTokens": 114189,
+      "modelDurationMs": 0,
+      "toolDurationMs": 14338,
+      "otherDurationMs": 2173110,
+      "fileChanges": {
+        "additions": 1661,
+        "deletions": 0,
+        "files": 4,
+        "state": "active"
+      }
+    },
+    "error": null,
+    "evidence": "snapshot",
+    "seq": 74375,
+    "logEpoch": "fixture-live-epoch",
+    "headerRowId": 1
+  },
+  "snapshotBefore": {
+    "sessionId": "own-native",
+    "logEpoch": "fixture-rebuilt-epoch",
+    "seq": 362,
+    "control": {
+      "phase": "completedSuccess",
+      "canStop": false,
+      "stopState": "idle",
+      "apiRetryPresent": false,
+      "activeWorks": []
+    },
+    "queue": {
+      "count": 0
+    },
+    "pendingInteractionCount": 0,
+    "workspaceHookAdmissionPresent": false,
+    "inputRouting": {
+      "mode": "startNow"
+    },
+    "headers": []
+  },
+  "historyPage": {
+    "atSeq": 380,
+    "atLogEpoch": "fixture-rebuilt-epoch",
+    "hasMore": false,
+    "beforeRowId": 2,
+    "rowCount": 1,
+    "headers": [
+      {
+        "rowId": 1,
+        "turnId": "own-turn",
+        "entityId": "own-turn",
+        "productTurnId": "own-turn",
+        "visibility": "visible",
+        "createdAt": 1793814042854,
+        "createdAtSeq": 3,
+        "actions": {
+          "canRewindFiles": true
+        },
+        "kind": "turnHeader",
+        "origin": "userInput",
+        "executionKind": "agent",
+        "sourceCommandId": "own-command",
+        "historyRoundCount": 38,
+        "state": "completedSuccess",
+        "startedAt": 1793814042854,
+        "endedAt": 1793816229776,
+        "activeMs": 2186922,
+        "outputTokens": 0,
+        "modelDurationMs": 0,
+        "toolDurationMs": 3849,
+        "otherDurationMs": 2183073,
+        "fileChanges": {
+          "additions": 1692,
+          "deletions": 0,
+          "files": 4,
+          "state": "active"
+        }
+      }
+    ]
+  },
+  "turn": {
+    "seen": true,
+    "terminal": true,
+    "state": "completedSuccess",
+    "header": {
+      "rowId": 1,
+      "turnId": "own-turn",
+      "entityId": "own-turn",
+      "productTurnId": "own-turn",
+      "visibility": "visible",
+      "createdAt": 1793814042854,
+      "createdAtSeq": 3,
+      "actions": {
+        "canRewindFiles": true
+      },
+      "kind": "turnHeader",
+      "origin": "userInput",
+      "executionKind": "agent",
+      "sourceCommandId": "own-command",
+      "historyRoundCount": 38,
+      "state": "completedSuccess",
+      "startedAt": 1793814042854,
+      "endedAt": 1793816229776,
+      "activeMs": 2186922,
+      "outputTokens": 0,
+      "modelDurationMs": 0,
+      "toolDurationMs": 3849,
+      "otherDurationMs": 2183073,
+      "fileChanges": {
+        "additions": 1692,
+        "deletions": 0,
+        "files": 4,
+        "state": "active"
+      }
+    },
+    "error": null,
+    "evidence": "conversationRowsRangeV4",
+    "seq": 380,
+    "logEpoch": "fixture-rebuilt-epoch"
+  }
+}

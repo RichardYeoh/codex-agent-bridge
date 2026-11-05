@@ -2,7 +2,9 @@
 
 以Codex为主控，通过Herdr管理外部执行Agent。Codex负责规划、核心开发、派工、独立审查和最终验收；CBC、ZCode、Antigravity CLI（agy）与OpenCode执行明确、可验证的子任务，后续按统一契约接入其他Agent。
 
-当前版本：0.5.0。CBC要求Node.js 20及以上；ZCode执行端使用Node.js 24及以上、已登录并启用远控的ZCode Desktop。运行环境保持原生Windows、PowerShell与Herdr。公开源码不包含认证配置或本机原始会话。
+当前CBC分层协议版本：0.6.0（发布ID `cbc-v2-0.6.0-r3`）；旧任务与其他执行端保留0.5.0兼容路径。CBC要求Node.js 20及以上；ZCode执行端使用Node.js 24及以上、已登录并启用远控的ZCode Desktop。运行环境保持原生Windows、PowerShell与Herdr。公开源码不包含认证配置或本机原始会话。
+
+CBC的新派工通过原入口自动选择V2，固定请求回执、交付快照和独立验收；交付后的普通聊天不回退旧结果。Herdr显示由已安装`herdr-codebuddy`插件负责。已有任务不热迁移，详情见[分层发布与验证](docs/CBC分层协议发布与验证.md)及其使用说明。
 
 CBC 2.179.2的DeepSeek 1M窗口已通过显式载入[窗口预设](agent-bridge/examples/cbc-context-1m.json)的真实TUI及短请求验证。2026-11-03检查发现本机cbc三个入口的参数注入已失效，普通cbc不保证1M；本轮整改已让桥接buildCommand显式传入该预设，新启动不再依赖入口注入。此变更经命令构造回归，未重启现有CBC或重做真实百万token压力验证。安装、检查、恢复及npm升级边界见[CBC窗口验证说明](docs/CBC上下文窗口设置与验证.md)；新机器不会因克隆仓库自动改动全局入口。
 

@@ -131,7 +131,9 @@ test('initial dispatch records its pre-worker boundary so a failed new session r
     inputs: [{ path: 'contract.md', purpose: 'Read-only fixture reference' }], allowedChanges: ['result.txt'],
     requirements: ['Do not run real tools'], acceptance: [{ command: 'node verify.cjs', expected: 'exit 0' }], deliverables: ['result.txt'] });
   const result = spawnSync(process.execPath, ['--require', path.join(__dirname, 'fixtures/startup-preload.cjs'),
-    path.join(__dirname, '../bin/agent-bridge.js'), 'dispatch', '--agent', 'cbc', '--task-id', 'first-launch-failed',
+    // Keep a legacy startup fixture on its own runtime. / 旧版启动夹具固定使用旧版运行入口。
+    path.join(__dirname, fs.existsSync(path.join(__dirname, '../bin/agent-bridge-v1.js'))
+      ? '../bin/agent-bridge-v1.js' : '../bin/agent-bridge.js'), 'dispatch', '--agent', 'cbc', '--task-id', 'first-launch-failed',
     '--worker-key', 'separate-binding', '--cwd', task.stateDir, '--session', 'test', '--workspace', 'test-workspace',
     '--spec-file', specFile], { env: { ...process.env, AGENT_BRIDGE_STATE_DIR: task.stateDir,
       CODEX_THREAD_ID: '', HERDR_PANE_ID: '' }, encoding: 'utf8', timeout: 10000, windowsHide: true });

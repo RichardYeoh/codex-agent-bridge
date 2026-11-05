@@ -1,0 +1,9 @@
+{
+  "enabledCBC": true,
+  "currentRelease": "cbc-v2-0.6.0-r3",
+  "releases": {
+    "cbc-v2-0.6.0": "versions/cbc-v2-0.6.0/agent-bridge/bin/agent-bridge-v2.js",
+    "cbc-v2-0.6.0-r2": "versions/cbc-v2-0.6.0-r2/agent-bridge/bin/agent-bridge-v2.js",
+    "cbc-v2-0.6.0-r3": "versions/cbc-v2-0.6.0-r3/agent-bridge/bin/agent-bridge-v2.js"
+  }
+}

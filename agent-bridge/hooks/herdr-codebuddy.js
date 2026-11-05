@@ -85,6 +85,8 @@ async function main() {
   let binding = null;
   try { binding = resolveBinding(event, stateDir, HERDR_PANE_ID, AGENT_BRIDGE_HERDR_SESSION, HERDR_BIN_PATH, pane); } catch {}
   if (!binding && expectedBridgeBinding && name !== 'UserPromptSubmit') return;
+  // The installed plugin owns standalone and V2 UI status. / 独立会话和V2显示归已安装插件。
+  if (!expectedBridgeBinding || binding?.task.taskProtocol === 2) return;
   const release = name === 'SessionEnd';
   if (release && !binding) return;
 

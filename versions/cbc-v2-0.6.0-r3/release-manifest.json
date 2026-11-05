@@ -1,0 +1,972 @@
+{
+  "schemaVersion": 1,
+  "fileCount": 193,
+  "aggregateSha256": "e3476f9400c76b73914eea6a15a82e4b1c5325f2cf5d309fb65be93f74126535",
+  "files": [
+    {
+      "path": "agent-bridge/bin/agent-bridge-v2.js",
+      "size": 438,
+      "sha256": "0135ae62e9270a376b1c31ebf7ae0315a697a60c340ed2627c2ac5d23d09c2ad"
+    },
+    {
+      "path": "agent-bridge/bin/agent-bridge-watcher.js",
+      "size": 16025,
+      "sha256": "b59c90d1c6bba01d900d865f25cb614f3fb06522f825fbf70099db05b09e4fc6"
+    },
+    {
+      "path": "agent-bridge/bin/agent-bridge.js",
+      "size": 48253,
+      "sha256": "0340bb5ebffba710c0bf5c35720d6cd17ca0fcf95afa8f6e9b2bfb3316ba223a"
+    },
+    {
+      "path": "agent-bridge/bin/bridge-result.js",
+      "size": 1415,
+      "sha256": "c0997aa56f2a83ce4056b1773e20f1ae663bf8ef8617a618c1a3da5be3d109d5"
+    },
+    {
+      "path": "agent-bridge/bin/codex-events.js",
+      "size": 4150,
+      "sha256": "dca70b786f3ccc7967799bff417fee70de50a4c79f69ca30dc8da05a344e1840"
+    },
+    {
+      "path": "agent-bridge/bin/opencode-worker.js",
+      "size": 4627,
+      "sha256": "317306317e4d351836a5d38ab4629d82d2cbc8f0f85d54aa3790806ad56a4baa"
+    },
+    {
+      "path": "agent-bridge/bin/resume-worker.js",
+      "size": 6822,
+      "sha256": "2579b87f8b2991ae19fbfe8036c2b4691cd6166275361e2e176c9cfdafe28e53"
+    },
+    {
+      "path": "agent-bridge/bin/zcode-control.js",
+      "size": 7159,
+      "sha256": "c7a5044b39410a5df95a8deb2c39806765d5202b834c922dd8f134a79baac331"
+    },
+    {
+      "path": "agent-bridge/bin/zcode-worker.js",
+      "size": 38989,
+      "sha256": "32cee03ea491fb55e4a3bb7fe4071db69f922d17d8f6711838db34c1159fa564"
+    },
+    {
+      "path": "agent-bridge/examples/cbc-context-1m.json",
+      "size": 31,
+      "sha256": "147c858cc62240e78ec44fdc0fdaa950e77723a7a21c6cfd5d89710f3f567f9b"
+    },
+    {
+      "path": "agent-bridge/examples/codex-events/config.example.json",
+      "size": 278,
+      "sha256": "1f980b5675276ca443f06a5312c805bc239c377ce71fab84c9705b4511485b57"
+    },
+    {
+      "path": "agent-bridge/examples/codex-events/tunnel-client.example.yaml",
+      "size": 746,
+      "sha256": "7936ae69d2252777d07258949c61fd34f3dd467caf1d4452ff1653e0f9e7edc6"
+    },
+    {
+      "path": "agent-bridge/hooks/cbc-task-events.js",
+      "size": 2531,
+      "sha256": "462042406df8494755f8d5c790c2eb9cec9bc6059179c458d18becc3089390bd"
+    },
+    {
+      "path": "agent-bridge/hooks/codex-events.js",
+      "size": 1083,
+      "sha256": "0f1d6a62cba81e76ab9784cbc87ba0b7cc36075bc0667b929fd5842c0b8cf66d"
+    },
+    {
+      "path": "agent-bridge/hooks/herdr-agy.js",
+      "size": 6169,
+      "sha256": "0f82006e1b5dfd8525732325f990f51bcd72cc07d0ec590e34b37f2ee0a3f858"
+    },
+    {
+      "path": "agent-bridge/hooks/herdr-binding.js",
+      "size": 2659,
+      "sha256": "58383f4e927350cdc835d0d2e3bc5f4f2e1ce6d3e49495e47ff522af738c8c03"
+    },
+    {
+      "path": "agent-bridge/hooks/herdr-codebuddy.js",
+      "size": 7118,
+      "sha256": "10d623a3e446c75c3912983f017265deb18838aead649f5a88ad0683d60d2ebb"
+    },
+    {
+      "path": "agent-bridge/hooks/herdr-resume.js",
+      "size": 1067,
+      "sha256": "9e6cdf67b7021661ea0a917b3c6f422c12402a214c58ccbf8c8b808c4b7252fb"
+    },
+    {
+      "path": "agent-bridge/lib/agents.js",
+      "size": 9155,
+      "sha256": "708dd751fc7d183dbc748afa08fcd080323a7181f04b8a9232e310e369ab0aab"
+    },
+    {
+      "path": "agent-bridge/lib/agy-client.js",
+      "size": 5065,
+      "sha256": "40cc652c9cb503618affdd89da4c132e0545763116bb2dca6e843e87bf1be271"
+    },
+    {
+      "path": "agent-bridge/lib/agy-hooks.js",
+      "size": 5237,
+      "sha256": "3dd022885fb0b3069f1b828b00b9777cd9e44ca0844f5588432f3a846b2e6537"
+    },
+    {
+      "path": "agent-bridge/lib/blocker.js",
+      "size": 1094,
+      "sha256": "7799c57067c28ec2bab3a9da3ef15b4a898dd735a695a2bb6811a26f65f9c8b1"
+    },
+    {
+      "path": "agent-bridge/lib/cancellation.js",
+      "size": 6999,
+      "sha256": "6bb16ee4d60c7c21bd2b5d7290df08860b0c29061f4b4b691accdf5fe5d40009"
+    },
+    {
+      "path": "agent-bridge/lib/cbc-evidence-cache.js",
+      "size": 6617,
+      "sha256": "b30859d8cdb26a55bcd4a0346386c625bf86b5b5e1a41ee81a0b45a6731179dd"
+    },
+    {
+      "path": "agent-bridge/lib/cbc-executor-evidence.js",
+      "size": 1427,
+      "sha256": "3e3872d837f85c9ed6dd39372a987961d73431289ebe5820c0458347b70982e0"
+    },
+    {
+      "path": "agent-bridge/lib/cbc-native-continuations.js",
+      "size": 3242,
+      "sha256": "0409a2cd412d5f82b8a137700b1d0c6f64bcfe000f088a7456e4521f550b2da1"
+    },
+    {
+      "path": "agent-bridge/lib/cbc-observation.js",
+      "size": 4508,
+      "sha256": "d162e3e8dabb4f3055fff91b9fa9c169838c9042bbde15978fba93d6369412fd"
+    },
+    {
+      "path": "agent-bridge/lib/cbc-prompt.js",
+      "size": 23051,
+      "sha256": "3a3e9a902995e99cd05a0c464cd0f24abeaf1e06d63f64bebdbf640089e0ce48"
+    },
+    {
+      "path": "agent-bridge/lib/cbc-protocol-v2.js",
+      "size": 24635,
+      "sha256": "ab5bf52561b0e95b2b807169316ec7fd00a784a8644790e5be1859454a5cb85e"
+    },
+    {
+      "path": "agent-bridge/lib/cbc-reconciliation.js",
+      "size": 13409,
+      "sha256": "e4d1e8bcfacee47d076c448a8bef8d2bcd882b788451ec8268487db38e4fba36"
+    },
+    {
+      "path": "agent-bridge/lib/cbc-turn.js",
+      "size": 21888,
+      "sha256": "3834fa63c0878ea8dc97e2b93e33034c8ddf963b6190be29ba8d1b471b4cb0dd"
+    },
+    {
+      "path": "agent-bridge/lib/codex-client.js",
+      "size": 7083,
+      "sha256": "add5d666557f02991d4d5b236112891dc49a2cf25da9a9616ce51004d76be735"
+    },
+    {
+      "path": "agent-bridge/lib/coordination-exit.js",
+      "size": 3663,
+      "sha256": "fd5aee4a1135262398e493a2b07a8218a3a9bc186394f03ed7b8af620fd81832"
+    },
+    {
+      "path": "agent-bridge/lib/events/hook-config.js",
+      "size": 1725,
+      "sha256": "ce659bb4350cac9ce50725d81c5e68385080a5b2cd8ba680e9b06e6a845370f5"
+    },
+    {
+      "path": "agent-bridge/lib/events/server.js",
+      "size": 3575,
+      "sha256": "90ef48924e7c59b0ec9e7d842e53c43b343a7b59473cacc22e8ca954c8f28e57"
+    },
+    {
+      "path": "agent-bridge/lib/events/service.js",
+      "size": 10712,
+      "sha256": "b628aab44504045e2cce1c221bc0ba902fb5378dfeb4a71c53922f473b027900"
+    },
+    {
+      "path": "agent-bridge/lib/events/store.js",
+      "size": 5482,
+      "sha256": "538bf59297eb0abcb062cfa425a7cbbe46d81e1932ba4bb6fa9d89910802a02f"
+    },
+    {
+      "path": "agent-bridge/lib/events/webhook.js",
+      "size": 4771,
+      "sha256": "ce7a41a42bce2b47cec44a0a956fb7b749a82314180ee7956d92b572d5b85a59"
+    },
+    {
+      "path": "agent-bridge/lib/herdr.js",
+      "size": 5515,
+      "sha256": "167ab2b599d5b4752b852a242f1104358ad0b426cd08f56663e5fa21a4404ba1"
+    },
+    {
+      "path": "agent-bridge/lib/location.js",
+      "size": 7204,
+      "sha256": "b45b0a10b1a42d1c20f3580f0ae562c77657ff4fc4c5cc27089191ffcf803899"
+    },
+    {
+      "path": "agent-bridge/lib/messages.js",
+      "size": 15321,
+      "sha256": "f89659dc43476486b73e7232b30e543e67d92334b0f49d2f94c3f075cff77822"
+    },
+    {
+      "path": "agent-bridge/lib/notification-control.js",
+      "size": 9619,
+      "sha256": "560d80df279dae1f25716928822d73ee6d4bf42df2bc752e6a29770d017de486"
+    },
+    {
+      "path": "agent-bridge/lib/notify.js",
+      "size": 7596,
+      "sha256": "d18bacf5f257fd4181b317a6f90a78b8387a49d5564ed72820de469a77417178"
+    },
+    {
+      "path": "agent-bridge/lib/opencode.js",
+      "size": 39944,
+      "sha256": "33b272f482b7e8bf824adb884ee2037abe67700a38f48ae94207f20a3bfc5ef7"
+    },
+    {
+      "path": "agent-bridge/lib/pane-cancellation.js",
+      "size": 1818,
+      "sha256": "505800b1addb8c022f766cc26e0f889409e733594379adb16f478d566569b7df"
+    },
+    {
+      "path": "agent-bridge/lib/path-identity.js",
+      "size": 795,
+      "sha256": "b139076abd62814baaa09014bed83385a2d4282fd43794f7b52439fbbd42cf77"
+    },
+    {
+      "path": "agent-bridge/lib/process-lock.js",
+      "size": 1646,
+      "sha256": "e9206364d600c480730c30e5e5cf904bbd0e4f3a758171aa42b0127b83947ae7"
+    },
+    {
+      "path": "agent-bridge/lib/protocol-artifacts.js",
+      "size": 7698,
+      "sha256": "45f77648f5adb7025a78c851083a4271733a8d6b10f4e49827186ff72819631e"
+    },
+    {
+      "path": "agent-bridge/lib/protocol-v2.js",
+      "size": 16298,
+      "sha256": "2087dbe154fa07d861d2ad1d94acd1ff1d4667810938bea1c0a10f1d2dbf27a7"
+    },
+    {
+      "path": "agent-bridge/lib/startup-recovery.js",
+      "size": 4994,
+      "sha256": "51088cf9c438cd9eb41b070049c278b212852b2a44bf851ad8e9ff13210dd071"
+    },
+    {
+      "path": "agent-bridge/lib/submission-attempt.js",
+      "size": 1212,
+      "sha256": "bc66b3aded8481148a4d57b4d84ac495d941022ba37f67e527806732f28a2d1e"
+    },
+    {
+      "path": "agent-bridge/lib/submission-rejection.js",
+      "size": 15185,
+      "sha256": "8100471de63e3262e61085a73d588b947a0b68af409610283286dd1c74a51d84"
+    },
+    {
+      "path": "agent-bridge/lib/task-recovery.js",
+      "size": 10693,
+      "sha256": "f0f7c1ac467aa9537028e7d5fad39348be8cfd291bd2446596e53427484bdbbf"
+    },
+    {
+      "path": "agent-bridge/lib/util.js",
+      "size": 6388,
+      "sha256": "dbd369f0b49081ad101fea3cd4416c908953c4ee40c406da9407f20b4c8496ea"
+    },
+    {
+      "path": "agent-bridge/lib/windows-worker-process.js",
+      "size": 17209,
+      "sha256": "48d67b76532b66aeaa8a76545907e9926f916b3503e9a95c37bcac9472c07b2a"
+    },
+    {
+      "path": "agent-bridge/lib/worker-binding.js",
+      "size": 829,
+      "sha256": "3c307d17311ceedad646dcef7753fb3f9856da319849ad9d6faa9046098d0c3c"
+    },
+    {
+      "path": "agent-bridge/lib/worker-context.js",
+      "size": 15423,
+      "sha256": "fb187753c42324941d6c4e1f755ba0c62413b1a0b4f11099152c94f8ae50688d"
+    },
+    {
+      "path": "agent-bridge/lib/worker-identity.js",
+      "size": 4287,
+      "sha256": "afe33662b9ce5ac9439f8d4f6fce5c8e22ba9f0e1da884d143dcf86511bc9af4"
+    },
+    {
+      "path": "agent-bridge/lib/worker-lease.js",
+      "size": 1235,
+      "sha256": "50b1040018c4805420df3a792012d80cbb98b078f59ad1e04b2ef34a3d59faf8"
+    },
+    {
+      "path": "agent-bridge/lib/worker-policy.js",
+      "size": 25246,
+      "sha256": "f4d4e378b333b505ffd8d32ac46869d104955a311bd2d7322058dd4069e51b33"
+    },
+    {
+      "path": "agent-bridge/lib/worker-scheduling.js",
+      "size": 5022,
+      "sha256": "7673c5270899aa762b7165ab89ffc94e5886df19f89a7d9fef702311a66dc5c7"
+    },
+    {
+      "path": "agent-bridge/lib/worker.js",
+      "size": 3209,
+      "sha256": "8579ade222560e0aa558aa5d868b887c4b0ed7cd26148c41f40e0f5dfbf79129"
+    },
+    {
+      "path": "agent-bridge/lib/zcode-adoption.js",
+      "size": 9974,
+      "sha256": "e0d11ce0b5e6bb87bac941e12498e90a7a3440325224dfc5cea11156019f7176"
+    },
+    {
+      "path": "agent-bridge/lib/zcode-cancellation.js",
+      "size": 21474,
+      "sha256": "a407f1f3e0b3b6b5c852e518fa1808ef7c099e75006568bff670efffe0280fe1"
+    },
+    {
+      "path": "agent-bridge/lib/zcode-errors.js",
+      "size": 1493,
+      "sha256": "5c457d6ccd06140234844b1dedfc23de4d604777a7f383f60b2a2edd5b07af90"
+    },
+    {
+      "path": "agent-bridge/lib/zcode-observation.js",
+      "size": 8428,
+      "sha256": "15335960824ce1f508929d709837f9af3f46d62c5b6b87dfbc38b7b64b25c822"
+    },
+    {
+      "path": "agent-bridge/lib/zcode-prompt.js",
+      "size": 5048,
+      "sha256": "92b87bbea671e75ffaeac9624169ca51439365f7d9ff0ecadb374411d25733d2"
+    },
+    {
+      "path": "agent-bridge/lib/zcode-readiness.js",
+      "size": 10382,
+      "sha256": "0ffc7aaf4c41fa36097205b2b37235df759434b78ef50385f3ac52417ed4ae9f"
+    },
+    {
+      "path": "agent-bridge/lib/zcode-rebinding.js",
+      "size": 4633,
+      "sha256": "1b45ed153fc4b06c58f9aa2154f8b3cc92d934a3110709d49d390239bfabe2f5"
+    },
+    {
+      "path": "agent-bridge/lib/zcode-reconciliation.js",
+      "size": 25499,
+      "sha256": "7b71126010ebd57bf60413ea4e80291c6b3a6b0ebc23c9d6fa0401fa9def7261"
+    },
+    {
+      "path": "agent-bridge/lib/zcode-relay-lease.js",
+      "size": 4121,
+      "sha256": "153f233816f62ea75a0210ba52772ba6980ebe8f8e9f7b810bd216d214b1bfda"
+    },
+    {
+      "path": "agent-bridge/lib/zcode-remote.js",
+      "size": 15565,
+      "sha256": "e9fb2ed98fc5ba77ae1fe3e238e70d82a44e114b0107fb1023d242ec1b977d77"
+    },
+    {
+      "path": "agent-bridge/lib/zcode-settlement.js",
+      "size": 3148,
+      "sha256": "e71cbf160b0150d1c577a2916d0e902ebd16db63c51380d00ac1d00962c08f33"
+    },
+    {
+      "path": "agent-bridge/package.json",
+      "size": 429,
+      "sha256": "3e33601e0e0a660b20df0eec4444e88c1f6069f203d7a2bddf9fa3d1a245214d"
+    },
+    {
+      "path": "agent-bridge/scripts/install.js",
+      "size": 6367,
+      "sha256": "11260aaf56d47ed59619d6df4339068af8a4c84c121c8d80e7ca90d25a06bc72"
+    },
+    {
+      "path": "agent-bridge/skills/delegate-worker/SKILL.md",
+      "size": 20953,
+      "sha256": "9bf8abc1c6f53c1584e6ed1b94ba4e5178f3cae6a19bf1fe00821766609b6e57"
+    },
+    {
+      "path": "agent-bridge/skills/delegate-worker/agents/openai.yaml",
+      "size": 440,
+      "sha256": "1dea768f78f9d8553cba873e2918f7fc5130e959d1f4cb5b11a505707b85e939"
+    },
+    {
+      "path": "agent-bridge/skills/delegate-worker/references/agy-cli.md",
+      "size": 4229,
+      "sha256": "1b818cd4d34112b4147cc611f7ee6979108ab8cc93395b18c79ee9c8f46749d7"
+    },
+    {
+      "path": "agent-bridge/skills/delegate-worker/references/executor-permissions.md",
+      "size": 3527,
+      "sha256": "4bb5992caa29d4912afb078c3a47492bb3f0fba732e25877b5a150b0604373b6"
+    },
+    {
+      "path": "agent-bridge/skills/delegate-worker/references/opencode-cli.md",
+      "size": 5385,
+      "sha256": "6c3e7c60eda20a0102f6150773dc60bf6b69f9f7b4e5487c5b50ee75216c3abb"
+    },
+    {
+      "path": "agent-bridge/skills/delegate-worker/references/recovery-safety.md",
+      "size": 3960,
+      "sha256": "f904cd292aa42c9174c65d2a459b1961cc12335643e980ce0a919db4dd965ab1"
+    },
+    {
+      "path": "agent-bridge/skills/delegate-worker/references/task-brief-template.md",
+      "size": 2446,
+      "sha256": "08ce0677177fd5abefd9f647fa7508e6ae34406d075d180fca3f1e2a96714e24"
+    },
+    {
+      "path": "agent-bridge/skills/delegate-worker/references/zcode-desktop.md",
+      "size": 3284,
+      "sha256": "1193ae726376a3bd2253c2898ec22c5f9666a69c64a2275307e4e14f71d96506"
+    },
+    {
+      "path": "agent-bridge/test/agents.test.js",
+      "size": 4038,
+      "sha256": "db8449b1f55b24883e1d9526dc0469669c781bb1757cc93994595d89f8f75521"
+    },
+    {
+      "path": "agent-bridge/test/agy-client.test.js",
+      "size": 3595,
+      "sha256": "8fdf53862b3d7f4ae256036695c0632d715e7a5a4fe8150bb6400046d9755e04"
+    },
+    {
+      "path": "agent-bridge/test/agy-hooks.test.js",
+      "size": 6563,
+      "sha256": "118e5596d1ccbb30724a0ab9c4a370722af8f059aae0dcdd72c32dc2f3abe8df"
+    },
+    {
+      "path": "agent-bridge/test/cancellation.test.js",
+      "size": 14485,
+      "sha256": "1032d9caa760aa2218625b9b7ca7b962b96bcb1f6e0963f2c6f545fd27adab9b"
+    },
+    {
+      "path": "agent-bridge/test/cbc-absence.test.js",
+      "size": 1927,
+      "sha256": "c08f040a1d0d0c52ebe272b65ff737064579b805c3905eea3cd9a4ac163286f1"
+    },
+    {
+      "path": "agent-bridge/test/cbc-context-launcher.test.js",
+      "size": 5231,
+      "sha256": "3b7efd4170f304856885637b1a3c591247375c83c4ec55de6a0b06b78b9c33a5"
+    },
+    {
+      "path": "agent-bridge/test/cbc-evidence-cache.test.js",
+      "size": 7839,
+      "sha256": "fab2ff9fb4c469e722c143ad8eaa0615f0bad4c4cde5629546bd4a71db68074b"
+    },
+    {
+      "path": "agent-bridge/test/cbc-native-continuations.test.js",
+      "size": 4285,
+      "sha256": "3ea2cb366faa3193a06f2f2efc71e1b4e84ad5e9112b45ceeccf5ca774c656b6"
+    },
+    {
+      "path": "agent-bridge/test/cbc-observation.test.js",
+      "size": 12311,
+      "sha256": "970a581912e93138fae3251cdc81de37b9b9f683293071e4735ed136a52b1450"
+    },
+    {
+      "path": "agent-bridge/test/cbc-protocol-v2.test.js",
+      "size": 13464,
+      "sha256": "1650c7a34016ca9538279b4e3fd5b48b16b1ee3606086f77d7e20cf5bb248c59"
+    },
+    {
+      "path": "agent-bridge/test/cbc-recovery-paths.test.js",
+      "size": 7778,
+      "sha256": "e9f566435538e05eabe90927620e8f4ce212dc1af092c0a8e7094bae91b4dd44"
+    },
+    {
+      "path": "agent-bridge/test/cbc-task-events.test.js",
+      "size": 15861,
+      "sha256": "913f99f0745c94e2c0d7b52b0a00db0b133c732e7bf6894659da74725b9cb738"
+    },
+    {
+      "path": "agent-bridge/test/cbc-terminal-context.test.js",
+      "size": 14093,
+      "sha256": "ec6eb31c1768ac5cf3235e14bb19df12012c9335ddfe10c03629e56f8bd426fd"
+    },
+    {
+      "path": "agent-bridge/test/cbc-turn.test.js",
+      "size": 30803,
+      "sha256": "55595204cbf277dca445cc4cbf151401c8de2af556f52a2460ee9e1fd8fdc06b"
+    },
+    {
+      "path": "agent-bridge/test/cbc-v2-recovery.test.js",
+      "size": 14473,
+      "sha256": "479850907729102745b781922e949ca528000afa14840a976f476c4dd1332a4d"
+    },
+    {
+      "path": "agent-bridge/test/cbc-watcher.test.js",
+      "size": 17244,
+      "sha256": "3eaa484f6ba6a80d588178a7e92b93468d332fafe87a7953d4e534965e2e0062"
+    },
+    {
+      "path": "agent-bridge/test/codex-client.test.js",
+      "size": 5189,
+      "sha256": "12446b926d37943e56c4fdc8ce5db4f514ff09e0556887f9eeff623c01685eb0"
+    },
+    {
+      "path": "agent-bridge/test/events.test.js",
+      "size": 19947,
+      "sha256": "7a32e3b6d9eea47ba0ab6e6f6494a4e8ec1ca07eddd75e5088c0e54ea4aa199f"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/agy-stub.cjs",
+      "size": 1022,
+      "sha256": "32c74244703adffd02e2e6791555a237d984d10a5d3dcabe28f9132d834ef975"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/cbc-local-status.json",
+      "size": 1628,
+      "sha256": "8486589f81ed7512022b0866d92e48ff68d475dd9c66e7429c6eb99e3fcaf48e"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/cbc-terminal-preload.cjs",
+      "size": 3980,
+      "sha256": "85b8b4ec6a73517a6fedec0493bdbc90876561ceb8e4085e4dbb13300649214e"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/codex-stub.cjs",
+      "size": 251,
+      "sha256": "1a1bd5d4436d648799ac323c3f93fc1ffb7ebd2b755f7e162def8f7cb9bad87f"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/hark-coordinator-recovery-preload.cjs",
+      "size": 4142,
+      "sha256": "5012cf0cdce383def94b7e320fddcaa57d259cf644531b1b6c9934b5b0192440"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/herdr-cbc-095-metadata.json",
+      "size": 1327,
+      "sha256": "bafef8fbbf6346524c31305e511b356b8c248f87845109b1a394826ce500aee4"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/herdr-stub.cjs",
+      "size": 2490,
+      "sha256": "aad79204183087425e252c67d6286c9eaa875fe1aba6508b93d1c20e5f2d5867"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/opencode-admission-preload.cjs",
+      "size": 2876,
+      "sha256": "d2a536b43c10e17531a5065f10f68b004b86d9195eee93123d2150ad08463d09"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/queue-client.cjs",
+      "size": 1224,
+      "sha256": "85f97e1e5c71893664633505f401c2efc84e1317263d8b0e72ffc1d09dce5b16"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/startup-preload.cjs",
+      "size": 603,
+      "sha256": "3d39ccb2ec4539a9ca49a229d333f2f2800c935a4415e8c4f7719b751e39b0e3"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/zcode-command-query-summary.json",
+      "size": 253,
+      "sha256": "aeac1033d73aca012593af2d9d5f38d4f0530e6a970528b70f6c9c9123f5afaf"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/zcode-preload.cjs",
+      "size": 1917,
+      "sha256": "8eaade7ed576a6f65e015a3518c1365649fa73599303e62431c5dfa4c5066222"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/zcode-readiness-preload.cjs",
+      "size": 8847,
+      "sha256": "e4cf33914eb711064c2b76006304648dbe3d37c4011585bc99f669c0f5e96716"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/zcode-rebuilt-terminal.json",
+      "size": 3615,
+      "sha256": "5ef71931fa7191f4d2ab907192470d8f5fd1213ecac64f794f27b441f9f43286"
+    },
+    {
+      "path": "agent-bridge/test/fixtures/zcode-snapshot.json",
+      "size": 2033,
+      "sha256": "5eb9ae7ffc14ae4954e7fc3201bade2cc399e931806babb1864775ee9e96eef2"
+    },
+    {
+      "path": "agent-bridge/test/hark-cbc-prompt.test.js",
+      "size": 32489,
+      "sha256": "33035f53583e9f46c9a2896556d250f5c1169a48e85b4771ffefbbe02d4dc76f"
+    },
+    {
+      "path": "agent-bridge/test/hark-cbc-reconciliation.test.js",
+      "size": 13697,
+      "sha256": "96087117744bb0b85a5fc263f681272c3410aff0ae3642635407ef462c9a741b"
+    },
+    {
+      "path": "agent-bridge/test/hark-coordinator-recovery.test.js",
+      "size": 19084,
+      "sha256": "633fb31e5ce2e4106de457bf189b675bc6fa3013f36722e36a08842c17577504"
+    },
+    {
+      "path": "agent-bridge/test/hark-core-safety.test.js",
+      "size": 10048,
+      "sha256": "f720493fb4d8378753fd09957aa639b3a91d32c342d80b95ee2766e2665895ce"
+    },
+    {
+      "path": "agent-bridge/test/hark-herdr-input-receipt.test.js",
+      "size": 5608,
+      "sha256": "4695a311eff6b384baa66c26d110186c093ba41f0c15c518d3c89a883d028471"
+    },
+    {
+      "path": "agent-bridge/test/hark-hook-resume.test.js",
+      "size": 21801,
+      "sha256": "9f4721e712773c8f7805f5224ac791fd1c2e222b99d4e87dd655b1f02a5ba230"
+    },
+    {
+      "path": "agent-bridge/test/hark-notify-regressions.test.js",
+      "size": 7225,
+      "sha256": "62e902561a878afbefcd59d8bcd0945fd61eeb74f1a454fb5ba719016902a637"
+    },
+    {
+      "path": "agent-bridge/test/hark-oc-adapter-safety.test.js",
+      "size": 19518,
+      "sha256": "f758c44948925df97bd7e6a2755650697e417c96c06102ea239ded413fa49ebc"
+    },
+    {
+      "path": "agent-bridge/test/hark-oc-worker-safety.test.js",
+      "size": 5125,
+      "sha256": "96d255cd26b1fb2780aaaddff9f0d8df4a51005b4abedcd8ef08719153877d08"
+    },
+    {
+      "path": "agent-bridge/test/hark-process-lock.test.js",
+      "size": 9243,
+      "sha256": "cedb59f572431cbed198eebb590673a550691968d2d769037da7602c456648c2"
+    },
+    {
+      "path": "agent-bridge/test/hark-submission-attempt.test.js",
+      "size": 6242,
+      "sha256": "70a8a715f45c1ded48850c74516594f0f6e125a155008081651e37f12fd2c806"
+    },
+    {
+      "path": "agent-bridge/test/hark-submission-rejection.test.js",
+      "size": 21286,
+      "sha256": "3ec5fa2f554bae7cb8ed0a7be43ceeda63827f08e64bcaabb1ec4acd7d179825"
+    },
+    {
+      "path": "agent-bridge/test/hark-watcher-observer.test.js",
+      "size": 14325,
+      "sha256": "368c765c48c5757d8c075bd74f9ad705a832e55c3ef4683206ea5bf6277de715"
+    },
+    {
+      "path": "agent-bridge/test/hark-zcode-cancellation.test.js",
+      "size": 8591,
+      "sha256": "5770c15e84a15173a0be1e6accb3a90c1e9b47493a8851f679c7ac13401fe7bf"
+    },
+    {
+      "path": "agent-bridge/test/hark-zcode-control.test.js",
+      "size": 6259,
+      "sha256": "d8134e74dd562b5b5b83a4847c316f1620a71b2a9268cde661d9a4874f20cf2b"
+    },
+    {
+      "path": "agent-bridge/test/hark-zcode-prompt.test.js",
+      "size": 6616,
+      "sha256": "e869435fcd0ef71f8a4ba16e02f54b696fc5b9f5d7bacbf0afac96805f62c2f7"
+    },
+    {
+      "path": "agent-bridge/test/hark-zcode-rebinding.test.js",
+      "size": 16803,
+      "sha256": "fae2520916f3660e8b6076ef607cac1692000b4610fe8c67f91d87968a61eb11"
+    },
+    {
+      "path": "agent-bridge/test/install.test.js",
+      "size": 2066,
+      "sha256": "4618d6bcbe0b5e52d3f9ee82c28f4d79b472bfdc4b9228b21b4b61c15500dfff"
+    },
+    {
+      "path": "agent-bridge/test/lifecycle.test.js",
+      "size": 8281,
+      "sha256": "3401cc3f98431f38a96d1518e8bb03ebe27b7e651e658d2049cb2a75828df3b8"
+    },
+    {
+      "path": "agent-bridge/test/location.test.js",
+      "size": 3404,
+      "sha256": "0bbf9b8ab63b26860ae952cd8b513181f7108c2cc1c609332c9874ca97956cd0"
+    },
+    {
+      "path": "agent-bridge/test/messages.test.js",
+      "size": 12774,
+      "sha256": "eb71bb2110fe716ea7f46754c3cc347bcda45d8e4b01fa6b386f8c7d627f03e9"
+    },
+    {
+      "path": "agent-bridge/test/notifications.test.js",
+      "size": 5095,
+      "sha256": "091d6a1903ce91ab90af11938e9c54d4f4298ac0ef40a112ef5ac11e40a303c9"
+    },
+    {
+      "path": "agent-bridge/test/opencode-admission.test.js",
+      "size": 13053,
+      "sha256": "7f82059df856e6a5cd22717b20e950898d74d2afa3a3dd62c0f01b0be2a8c555"
+    },
+    {
+      "path": "agent-bridge/test/opencode.test.js",
+      "size": 9814,
+      "sha256": "c0417550b87474c8a787792d32f9a6bf97923efe541e3efaf5e1c9548f70ddcb"
+    },
+    {
+      "path": "agent-bridge/test/protocol-artifacts.test.js",
+      "size": 11264,
+      "sha256": "1f148fe4fdf114a435fa923899ffca55b476ffdd2d107ccbcb54af8a7163dc55"
+    },
+    {
+      "path": "agent-bridge/test/protocol-v2.test.js",
+      "size": 40871,
+      "sha256": "2199bcf6adf9541444074652c942cb89f901c13b6e0940b3fd88a2c7dd6cdc59"
+    },
+    {
+      "path": "agent-bridge/test/publication.test.js",
+      "size": 2654,
+      "sha256": "64fc112894eec08ad26bd55789d587b009b4436c95111953183cdca07054383a"
+    },
+    {
+      "path": "agent-bridge/test/startup-recovery.test.js",
+      "size": 9880,
+      "sha256": "027ee4e968372d886b8ad62e29066d656a36153b6fefe8dd3075433c24f8db36"
+    },
+    {
+      "path": "agent-bridge/test/tunnel-runtime.test.js",
+      "size": 17186,
+      "sha256": "190070e601042810a54b5a9a7b3a6afe636f874909fad9f3bb1245bde5aad784"
+    },
+    {
+      "path": "agent-bridge/test/util.test.js",
+      "size": 3542,
+      "sha256": "d1db033f1d8799fbf5b3f704395c5218d84a3d830561c0052b5b39aa0b366059"
+    },
+    {
+      "path": "agent-bridge/test/v2-resource-fence.test.js",
+      "size": 5214,
+      "sha256": "0c2bc94dfdf08c76a496d51049a31c7fa0da0ff099bad86fd9cacef2616e95d6"
+    },
+    {
+      "path": "agent-bridge/test/watcher.test.js",
+      "size": 5927,
+      "sha256": "33fdf460a09ae91cbe164d94f66190d96bd209cf4ef680fb5f43fd670524ebe5"
+    },
+    {
+      "path": "agent-bridge/test/worker-context.test.js",
+      "size": 9429,
+      "sha256": "ba72a9828bee03b3b3174e22b6c2b704b9fa5780806226a70212774310e4bbfb"
+    },
+    {
+      "path": "agent-bridge/test/worker-policy.test.js",
+      "size": 14692,
+      "sha256": "9896ddd77e09625174660cedd465f7adf2a104b0156e3f9286338311c652443c"
+    },
+    {
+      "path": "agent-bridge/test/worker-scheduling.test.js",
+      "size": 2482,
+      "sha256": "560fdb9375bb07bc5e22cdf6f8c2cc17eb9fecbb10bb445467f606517685b9bd"
+    },
+    {
+      "path": "agent-bridge/test/zcode-adoption.test.js",
+      "size": 5276,
+      "sha256": "daab4fe1d358f67fda180f1682d95e0c55611d1a6f6cde2473ba514916ed8dc7"
+    },
+    {
+      "path": "agent-bridge/test/zcode-cancellation.test.js",
+      "size": 12434,
+      "sha256": "72218186134aa23eb620f9f7d8e38fe486573b1a92853483b6f1bbbed4c59ba3"
+    },
+    {
+      "path": "agent-bridge/test/zcode-errors.test.js",
+      "size": 1623,
+      "sha256": "70b4c5f6592b36384dc4ac4c47119a3c3c08a725dbef3c98815729787c4996ff"
+    },
+    {
+      "path": "agent-bridge/test/zcode-observation.test.js",
+      "size": 11857,
+      "sha256": "c19b75a8f29f3a1f2fb711881fcaaed0817dcf0767deb2997022a6f4db609b59"
+    },
+    {
+      "path": "agent-bridge/test/zcode-readiness.test.js",
+      "size": 20171,
+      "sha256": "85173a278bd640d8633db17250b9227a8d6f647c9d81d7db0a3d2bcf10d4b204"
+    },
+    {
+      "path": "agent-bridge/test/zcode-reconciliation.test.js",
+      "size": 31765,
+      "sha256": "b7a5b04d554160aed0eabee6a91a437001b64ee0d8325b54a9e636f6fe53360d"
+    },
+    {
+      "path": "agent-bridge/test/zcode-relay-lease.test.js",
+      "size": 7526,
+      "sha256": "e20f595e874e52d833c680f164f6ed8eeee9e60ab1c46bdf405fb6208bbe0b44"
+    },
+    {
+      "path": "agent-bridge/test/zcode-remote.test.js",
+      "size": 7447,
+      "sha256": "050681be6193b59120f63cfc47a46161cee436245a24ca069b73b300daf1bf7a"
+    },
+    {
+      "path": "agent-bridge/test/zcode-terminal-cancellation.test.js",
+      "size": 11478,
+      "sha256": "b47613bae55a9be66e43e7d3845d3faa908af728c72357488edc774179a27cb4"
+    },
+    {
+      "path": "agent-bridge/test/zcode-worker.test.js",
+      "size": 16027,
+      "sha256": "f00a009988a61cb1208142e3b571c100f2c621b72138d28c0e3b287043d334d2"
+    },
+    {
+      "path": "agent-bridge/vendor/zcode/LICENSE-ZCode",
+      "size": 11344,
+      "sha256": "606c36baf38b973227273df12a74930e4b4137280eea835c5cd623aa4553c13b"
+    },
+    {
+      "path": "agent-bridge/vendor/zcode/LICENSE-zod",
+      "size": 1072,
+      "sha256": "3f1189b28e3866e0d979968d466b78f813f76827cfdca1fbb124cc0a5c8841f8"
+    },
+    {
+      "path": "agent-bridge/vendor/zcode/README.md",
+      "size": 1320,
+      "sha256": "c42464d454dd9991029f69e709e963a1b1029188fea5c702e8771bf3a6b3c6a0"
+    },
+    {
+      "path": "agent-bridge/vendor/zcode/remote-sdk.cjs",
+      "size": 714928,
+      "sha256": "8843a3181861af8e75125f3dd022638f9a25c499b1aaa674299285341bed9951"
+    },
+    {
+      "path": "agent-bridge/vendor/zcode/sources.json",
+      "size": 10576,
+      "sha256": "de353907796370558c260a03156ee269312d8a09ac73369b2587ca7864b5c658"
+    },
+    {
+      "path": "docs/layered-v2/01-方案.md",
+      "size": 3384,
+      "sha256": "0ea4a877b825b5390d63491de72818d043589c0274b0a5a78b7b5a33b4410016"
+    },
+    {
+      "path": "docs/layered-v2/02-设计.md",
+      "size": 5650,
+      "sha256": "1fa8977b6b86914a666c0306f1fda21733fe1e6fb957046239c2cba37582ddf4"
+    },
+    {
+      "path": "docs/layered-v2/03-实现记录.md",
+      "size": 3248,
+      "sha256": "1c0534dc16edc15be253489f4109d9756d91b986842bdccc21d9652ff856098a"
+    },
+    {
+      "path": "docs/layered-v2/04-测试计划与结果.md",
+      "size": 3432,
+      "sha256": "2104dd0945f5b994d42547bfb9e277d29c9de7467cc648ac128ae78caabadf37"
+    },
+    {
+      "path": "docs/layered-v2/05-使用与维护.md",
+      "size": 5920,
+      "sha256": "0b66a53cc28b0998d8ece9db100302a3620c423bd255a995e7c7f3a02b98a849"
+    },
+    {
+      "path": "docs/layered-v2/06-异常与审查映射.md",
+      "size": 28933,
+      "sha256": "04f979388ba7294f540c14fef75665c9fe2c948f2f80dfa60a613972a3a72da4"
+    },
+    {
+      "path": "docs/layered-v2/07-网络恢复记录识别.md",
+      "size": 3523,
+      "sha256": "d8083569ceaf3ae32a2efad1e8dde2141e945a770902d68c0cb3db7dc732fa38"
+    },
+    {
+      "path": "evidence/2026-10-27/e2e/acceptance.test.cjs",
+      "size": 476,
+      "sha256": "19e3f26a490a5b61d84b06b84632033074e2aa3a5b0c9c021be4e3bf79746cb3"
+    },
+    {
+      "path": "evidence/2026-10-27/e2e/layout-acceptance.test.cjs",
+      "size": 301,
+      "sha256": "39998fa5452c262b05f3b946543e29ba8102752af9792e777b495fc176f11311"
+    },
+    {
+      "path": "evidence/2026-10-27/e2e/layout-proof.txt",
+      "size": 28,
+      "sha256": "44ef78464901b236d4865eb5c75b63e648cb823be01d5d35a9a83a43d2dc9a66"
+    },
+    {
+      "path": "evidence/2026-10-27/e2e/src/port.cjs",
+      "size": 1480,
+      "sha256": "483e93687ef2547f4e1074fbf8e892d192d36cc3535a22b0ea2a28301392202d"
+    },
+    {
+      "path": "package-lock.json",
+      "size": 1355,
+      "sha256": "2172b442440a9d4ce2ddd426a3a627a55ef5fdcd0cb6430124175166c8766347"
+    },
+    {
+      "path": "package.json",
+      "size": 580,
+      "sha256": "0fa73f319fe70f80c06348f879cbcfb213025564b1f8fac0d3fd164549c03c2a"
+    },
+    {
+      "path": "tools/build-zcode-sdk.cjs",
+      "size": 6057,
+      "sha256": "f104b0280143e9a6fee2299a6b264f34ad6be23cca7d10ccf015d77a688d264d"
+    },
+    {
+      "path": "tools/check-publication.cjs",
+      "size": 2746,
+      "sha256": "8ffe70e4cd384540667334b76b24c26ca3ec62db6a0310602ef45e1538bea728"
+    },
+    {
+      "path": "tools/configure-cbc-context.cjs",
+      "size": 7451,
+      "sha256": "0d19b160605bdff352c725c3499993e7dbbe6fa251bae7bb77837415265f7d42"
+    },
+    {
+      "path": "tools/diagnose-agent-ipc.cjs",
+      "size": 4102,
+      "sha256": "459cd315586b344d67eeed51648ba4a91170c265032f5d080ffc478633bfb7d9"
+    },
+    {
+      "path": "tools/layered-entry-router.cjs",
+      "size": 11821,
+      "sha256": "e30e49acc61f4e9a749ca84ac5eadd51bb5d301b0d57ec19820ebdd8e52e07f4"
+    },
+    {
+      "path": "tools/layered-entry-router.test.cjs",
+      "size": 16035,
+      "sha256": "e5ae309cdbe268c9a3f0f3e260bc6caea0382578b5b2f2a75ebb8adb99683531"
+    },
+    {
+      "path": "tools/layout-smoke.cjs",
+      "size": 3399,
+      "sha256": "6104c6ff6eee28327231d89b8a676bd67faf15a0c474af0fe7fe834ce0b63a1e"
+    },
+    {
+      "path": "tools/native-queue-smoke.cjs",
+      "size": 3852,
+      "sha256": "3ac18b8f9da7e5f80d384af20f22fb84473a9d00350814cee16485725d6cf185"
+    },
+    {
+      "path": "tools/prepare-layered-release.cjs",
+      "size": 20654,
+      "sha256": "276719860d805e270b3a92d91293aa1d2795ac6454a34190b7aed6369f6febe9"
+    },
+    {
+      "path": "tools/prepare-layered-release.test.cjs",
+      "size": 14849,
+      "sha256": "3ea6613dd573a0c8d97d1f8bb0790e739a7c6901e7cd9d3d0382c37ae44acb00"
+    },
+    {
+      "path": "tools/run-e2e.cjs",
+      "size": 393,
+      "sha256": "2e231f4bf42b60a8f3b21e4f7cbdd48749709c258a6f1a77324f372231f03c93"
+    },
+    {
+      "path": "tools/start-ydot-tunnel.ps1",
+      "size": 3074,
+      "sha256": "826db781b6101c2b86272b35c172952e19c000410ca39dbfeed9c478cbe75312"
+    },
+    {
+      "path": "tools/ydot-tunnel-runtime.cjs",
+      "size": 10931,
+      "sha256": "6f86bbb7d3cae2ab143133db5fade09ff3afb58a89ce74a4b08dee8c32954087"
+    },
+    {
+      "path": "tools/zcode-probe.cjs",
+      "size": 5485,
+      "sha256": "7c6468bf1fca45b0de94c234b3e8f0c0ec6755cac0e7605da652113c57d30fa5"
+    }
+  ]
+}

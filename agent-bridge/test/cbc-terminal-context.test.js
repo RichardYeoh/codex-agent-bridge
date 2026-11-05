@@ -130,7 +130,7 @@ test('explicit original-session mode does not apply to ZCode or explicit new-ses
   assert.throws(() => tryReuseContext(f.next, f.options), /requires CBC/);
 });
 
-for (const mode of ['working', 'fast-hook', 'rejected-then-resume']) test(`actual CBC CLI with optional Herdr metadata submits once (${mode})`, () => {
+for (const mode of ['working', 'fast-hook', 'rejected-then-resume', 'timeout-then-resume']) test(`actual CBC CLI with optional Herdr metadata submits once (${mode})`, () => {
   const finishImmediately = mode === 'fast-hook';
   const f = fixture(), transport = path.join(f.source.stateDir, 'transport.json'), specFile = path.join(f.source.stateDir, 'spec.json');
   fs.writeFileSync(specFile, JSON.stringify(f.source.taskSpec));
@@ -151,9 +151,12 @@ for (const mode of ['working', 'fast-hook', 'rejected-then-resume']) test(`actua
     ] },
     visibleText: 'CodeBuddy ready for the next task', nodePid: 51002, processStartedAt,
     nodeExecutable: process.execPath, cbcScript: f.cbcScript,
-    calls: [], submissions: 0, paneRuns: [], processProofCalls: 0 }));
+    calls: [], submissions: 0, paneRuns: [], processProofCalls: 0,
+    processProofFailure: mode === 'timeout-then-resume' ? 'query-timeout' : null }));
   const run = args => spawnSync(process.execPath, ['--require', path.join(__dirname, 'fixtures/cbc-terminal-preload.cjs'),
-    path.join(__dirname, '../bin/agent-bridge.js'), ...args],
+    // Legacy fixtures must not follow the enabled V2 default. / 旧版隔离夹具不得跟随已启用的V2默认路由。
+    path.join(__dirname, fs.existsSync(path.join(__dirname, '../bin/agent-bridge-v1.js'))
+      ? '../bin/agent-bridge-v1.js' : '../bin/agent-bridge.js'), ...args],
   { env: { ...process.env, AGENT_BRIDGE_STATE_DIR: f.source.stateDir, CBC_TERMINAL_TEST_STATE: transport,
     AGENT_BRIDGE_CBC: f.cbcShim, AGENT_BRIDGE_CBC_NATIVE: f.cbcShim },
     encoding: 'utf8', timeout: 10000, windowsHide: true });
@@ -161,15 +164,22 @@ for (const mode of ['working', 'fast-hook', 'rejected-then-resume']) test(`actua
     '--cwd', f.source.cwd, '--session', 'stub', '--workspace', 'w1', '--worker-key', 'input-sim',
     '--resume-task', f.source.id, '--spec-file', specFile, '--no-skip-permissions', '--codex-thread', 'fixture-thread']);
   let rejected;
-  if (mode === 'rejected-then-resume') {
+  if (['rejected-then-resume', 'timeout-then-resume'].includes(mode)) {
     assert.equal(result.status, 1);
     const failed = loadTask(f.next.id);
     assert.equal(failed.status, 'failed'); assert.equal(failed.round, 0);
     rejected = { file: failed.lastSubmissionRejection.file, bytes: fs.readFileSync(failed.lastSubmissionRejection.file) };
     assert.equal(JSON.parse(rejected.bytes).status, 'rejected-before-input');
+    if (mode === 'timeout-then-resume') {
+      for (const record of [JSON.parse(result.stderr), JSON.parse(rejected.bytes), failed.lastSubmissionRejection]) {
+        assert.equal(record.guardStage, 'process-query'); assert.equal(record.processProofCode, 'query-timeout');
+        assert.equal(record.preflightReadAttempts, 2);
+      }
+      assert.doesNotMatch(result.stderr, /private process error/);
+    }
     const state = JSON.parse(fs.readFileSync(transport));
     assert.equal(state.submissions, 0);
-    state.agent.state_change_seq = 1200; state.calls = [];
+    state.agent.state_change_seq = 1200; state.calls = []; state.processProofFailure = null;
     fs.writeFileSync(transport, JSON.stringify(state));
     result = run(['resume', f.next.id]);
   }
@@ -182,10 +192,10 @@ for (const mode of ['working', 'fast-hook', 'rejected-then-resume']) test(`actua
   assert.equal(next.submission.baselineStateChange, 1200);
   assert.equal(next.submission.baselineCompletion, 0);
   assert.equal(state.submissions, 1); assert.equal(state.paneRuns.length, 1);
-  assert.equal(state.processProofCalls, 2);
+  assert.equal(state.processProofCalls, mode === 'timeout-then-resume' ? 4 : 2);
   assert.equal(state.calls.filter(args => args[0] === 'pane' && args[1] === 'run').length, 1);
   assert.equal(state.calls.filter(args => args[0] === 'pane' && args[1] === 'list').length, 2);
-  assert.equal(state.calls.filter(args => args[0] === 'agent' && args[1] === 'list').length, mode === 'rejected-then-resume' ? 2 : 3);
+  assert.equal(state.calls.filter(args => args[0] === 'agent' && args[1] === 'list').length, ['rejected-then-resume', 'timeout-then-resume'].includes(mode) ? 2 : 3);
   assert.equal(state.calls.filter(args => args[0] === 'pane' && args[1] === 'process-info').length, 2);
   assert.equal(state.calls.filter(args => args[0] === 'pane' && args[1] === 'read').length, 2);
   assert.equal(state.calls.some(args => args[0] === 'agent' && args[1] === 'prompt'), false);

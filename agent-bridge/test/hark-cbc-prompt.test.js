@@ -548,3 +548,38 @@ test('read-only Windows subtree query uses configured PowerShell 7, UTF-8, and p
   assert.match(invocation.args.at(-1), /OutputEncoding/);
   assert.doesNotMatch(invocation.args.at(-1), /CommandLine/);
 });
+
+test('one timed-out preflight restarts both full proofs before exactly one input', async () => {
+  for (const failedRead of [1, 2]) {
+    const f = fixture(), d = dependencies(f); const original = d.deps.readDescendants; let reads = 0, pauses = 0;
+    d.deps.readDescendants = pid => { if (++reads === failedRead) throw Object.assign(new Error('private timeout'), { code: 'ETIMEDOUT' }); return original(pid); };
+    d.deps.pause = async ms => { assert.equal(ms, 250); pauses++; };
+    const receipt = await submit(f.task, 'one input', d.deps);
+    assert.equal(receipt.guard.preflightReadAttempts, 2); assert.equal(pauses, 1);
+    assert.equal(reads, failedRead + 2); assert.equal(d.runs.length, 1);
+  }
+});
+
+test('preflight retry never retries denial or identity mismatch and rechecks approvals', async () => {
+  for (const kind of ['denied', 'identity', 'timeout-always', 'approval-after-timeout']) {
+    const f = fixture(), d = dependencies(f); let calls = 0;
+    d.deps.readDescendants = () => { calls++; throw Object.assign(new Error('private query detail'), {
+      ...(kind === 'denied' ? { code: 'EACCES' } : kind === 'identity' ? { processProofCode: 'process-identity-changed' } : { code: 'ETIMEDOUT' }) }); };
+    d.deps.pause = async () => { if (kind === 'approval-after-timeout') d.setVisible('Do you trust this folder?'); };
+    await assert.rejects(submit(f.task, 'not sent', d.deps), error => {
+      assert.equal(error.code, 'CBC_PROMPT_GUARD_REJECTED'); assert.equal(error.requestSent, false);
+      assert.equal(error.preflightReadAttempts, ['timeout-always', 'approval-after-timeout'].includes(kind) ? 2 : 1);
+      assert.doesNotMatch(error.message, /private query detail/); return true;
+    });
+    assert.equal(calls, kind === 'timeout-always' ? 2 : 1); assert.equal(d.runs.length, 0);
+  }
+});
+
+test('guard diagnostics only expose approved fields and executable resolution has its own stage', async () => {
+  const {guardDiagnostics}=require('../lib/cbc-prompt');
+  assert.deepEqual(guardDiagnostics({code:'CBC_PROMPT_GUARD_REJECTED',guardStage:'PRIVATE',processProofCode:'PRIVATE',preflightReadAttempts:3}), {});
+  const f=fixture(), d=dependencies(f, {resolveCbcExecutable:()=>{throw Error('PRIVATE_PATH');}});
+  await assert.rejects(submit(f.task,'no send',d.deps),error=>{
+    assert.equal(error.guardStage,'executable-resolution'); assert.doesNotMatch(error.message,/PRIVATE_PATH/); return true;
+  }); assert.equal(d.runs.length,0);
+});

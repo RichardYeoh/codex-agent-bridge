@@ -10,6 +10,7 @@ const { spawn } = require('node:child_process');
 const { writeLease } = require('../lib/worker-lease');
 const { renderSubmissionPointer } = require('../lib/worker-policy');
 const { captureSubmission, readTurn } = require('../lib/cbc-turn');
+const { RECOVERY_TEXT } = require('../lib/cbc-native-continuations');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cbc-turn-proof-'));
 let serial = 0;
@@ -92,6 +93,26 @@ function captureChild(script, env, stdin) {
     child.stdin.end(stdin);
   });
 }
+
+test('network recovery metadata does not supersede the bound turn; later real input still does', () => {
+  const f = fixture({ phase: 'observed' });
+  const input = f.nativeUser(900, f.pointer, { providerData: { agent: 'cli', conversationRequestId: 'request-fixture' } });
+  const error = { ...input, id: 'network-error', role: 'assistant', timestamp: f.iso(1800), status: 'incomplete',
+    content: [{ type: 'output_text', text: 'Connection interrupted. Retrying automatically...' }],
+    providerData: { ...input.providerData, skipRun: true, error: { code: 'ECONNRESET', isNetworkError: true,
+      networkErrorAutoRetry: true, isRetryable: true, isStreamTimeout: false } } };
+  const retry = f.nativeUser(2000, RECOVERY_TEXT, { parentId: error.id,
+    providerData: { ...input.providerData, isMeta: true, startsNewUserRequest: false } });
+  f.writeNative([input, error, retry]);
+  const options = { nativeTranscript: f.nativeTranscript, nativeTranscriptRoot: f.nativeTranscriptRoot };
+  assert.equal(f.read(options).state, 'active');
+  f.appendEvents([f.hook('Stop', 3000)]);
+  const stopped = f.read(options);
+  assert.equal(stopped.state, 'stopped'); assert.equal(stopped.ignoredNativeContinuations.length, 1);
+  f.writeNative([input, error, retry, f.nativeUser(4000, 'explicit later task')]);
+  const superseded = f.read(options);
+  assert.equal(superseded.state, 'superseded'); assert.equal(superseded.laterInputAt, f.iso(4000));
+});
 
 test('captureSubmission hashes only native string prompts and tags only an exact protocol pointer', () => {
   const f = fixture();
@@ -408,4 +429,96 @@ test('native transcript reconciliation receipt must be bound to the exact task, 
   f.task.submission.reconciliationFile = path.join(f.taskRoot, 'wrong-receipt.json');
   writeJson(taskFile, f.task);
   assert.equal(f.read({ nativeTranscriptRoot: f.nativeTranscriptRoot }).state, 'invalid');
+});
+
+function localStatusRows(f) {
+  return structuredClone(require('./fixtures/cbc-local-status.json')).map(({timestampOffset,...row})=>({
+    ...row, sessionId:f.task.workerSessionId,cwd:f.task.cwd,timestamp:f.iso(2500+timestampOffset)
+  }));
+}
+
+test('real local status group after Stop is audited but does not supersede the native model turn', () => {
+  const f=fixture(), rows=localStatusRows(f);
+  f.setEvents([{...f.submit,nativeTranscript:f.nativeTranscript},f.hook('Stop',2000)]);
+  f.writeNative([f.nativeUser(900),...rows]);
+  const before=fs.readFileSync(f.nativeTranscript), taskBefore=fs.readFileSync(path.join(f.taskRoot,'task.json'));
+  const turn=f.read({nativeTranscriptRoot:f.nativeTranscriptRoot});
+  assert.equal(turn.state,'stopped'); assert.equal(turn.laterInputAt,null);
+  assert.equal(turn.ignoredLocalCommands[0].recordCount,3); assert.equal(turn.ignoredLocalCommands[0].recordsSha256,sha(JSON.stringify(rows)));
+  assert.deepEqual(fs.readFileSync(f.nativeTranscript),before);assert.deepEqual(fs.readFileSync(path.join(f.taskRoot,'task.json')),taskBefore);
+});
+
+test('local status exclusion requires exact metadata, linked complete group, identity, and a prior bound Stop', () => {
+  for(const variant of ['missing-skip','false-skip','other-agent','request','parent','id','missing-command','other-command','args','extra-body','before-stop','no-stop','foreign-identity','new-input','real-submit-hook']) {
+    const f=fixture(), rows=localStatusRows(f);
+    if(variant==='missing-skip')delete rows[0].providerData.skipRun;
+    if(variant==='false-skip')rows[2].providerData.skipRun=false;
+    if(variant==='other-agent')rows[1].providerData.agent='other';
+    if(variant==='request')rows[2].providerData.conversationRequestId='other';
+    if(variant==='parent')rows[2].parentId='other';
+    if(variant==='id')rows[2].id=rows[0].id;
+    if(variant==='missing-command')rows.pop();
+    if(variant==='other-command')rows[2].content[0].text='<command-name>/clear</command-name>';
+    if(variant==='args')rows[2].content[0].text+='<command-args>anything</command-args>';
+    if(variant==='extra-body')rows[2].content.push({type:'input_text',text:'real work'});
+    if(variant==='before-stop')rows.forEach((r,i)=>r.timestamp=f.iso(1500+i));
+    if(variant==='foreign-identity')rows[2].sessionId='foreign';
+    if(variant==='new-input')rows.push(f.nativeUser(3000,'new work'));
+    const hooks=[{...f.submit,nativeTranscript:f.nativeTranscript}];
+    if(variant!=='no-stop')hooks.push(f.hook('Stop',2000));
+    if(variant==='real-submit-hook')hooks.push(f.hook('UserPromptSubmit',2600,{submissionAttemptId:null,promptSha256:sha('/status')}));
+    f.setEvents(hooks);f.writeNative([f.nativeUser(900),...rows]);
+    assert.notEqual(f.read({nativeTranscriptRoot:f.nativeTranscriptRoot}).state,'stopped',variant);
+  }
+});
+
+test('official observed-turn reconciliation is read-only and accept handles local status without treating real input as safe', () => {
+  const {spawnSync}=require('node:child_process');
+  for(const later of [false,true]) {
+    const f=fixture({phase:'observed'}), userHome=path.join(root,'accept-home-'+serial);
+    const nativeRoot=path.join(userHome,'.codebuddy','projects');fs.mkdirSync(nativeRoot,{recursive:true});
+    const transcript=path.join(nativeRoot,f.task.workerSessionId+'.jsonl');
+    const rows=[f.nativeUser(900),...localStatusRows(f)];if(later)rows.push(f.nativeUser(3000,'actual new work'));
+    fs.writeFileSync(transcript,rows.map(JSON.stringify).join('\n')+'\n');
+    f.setEvents([{...f.submit,nativeTranscript:transcript},f.hook('Stop',2000)]);
+    f.task.status='review_pending'; f.task.history=[];writeJson(path.join(f.taskRoot,'task.json'),f.task);
+    const preload=path.join(f.taskRoot,'preload.cjs'), lib=path.resolve(__dirname,'../lib');
+    fs.writeFileSync(preload,`const h=require(${JSON.stringify(lib+'/herdr')});h.agentInfo=()=>{throw Error('no live terminal permitted')};h.api=()=>{throw Error('no input permitted')};require(${JSON.stringify(lib+'/notify')}).notifyTask=async()=>({status:'fixture-only'});`);
+    const args=['--require',preload,path.resolve(__dirname,'../bin/agent-bridge.js')];
+    const env={...process.env,USERPROFILE:userHome,AGENT_BRIDGE_STATE_DIR:f.stateDir};
+    const run=a=>spawnSync(process.execPath,[...args,...a],{env,encoding:'utf8',windowsHide:true,timeout:15000});
+    const original=fs.readFileSync(path.join(f.taskRoot,'task.json'));
+    const diagnostic=run(['reconcile-submission',f.task.id,'--cbc-transcript',transcript]);
+    assert.equal(diagnostic.status,0,diagnostic.stderr);const result=JSON.parse(diagnostic.stdout);
+    assert.equal(result.state,later?'superseded':'stopped');assert.equal(result.taskMutated,false);
+    assert.deepEqual(fs.readFileSync(path.join(f.taskRoot,'task.json')),original);
+    const accepted=run(['accept',f.task.id]);
+    if(later){assert.equal(accepted.status,1);assert.equal(JSON.parse(accepted.stderr).code,'CBC_ACCEPT_TURN_UNCONFIRMED');assert.match(accepted.stderr,/superseded/);assert.deepEqual(fs.readFileSync(path.join(f.taskRoot,'task.json')),original);}
+    else{assert.equal(accepted.status,0,accepted.stderr);assert.equal(JSON.parse(accepted.stdout).status,'accepted');}
+  }
+});
+
+test('a later native model menu remains unconfirmed after excluding the read-only status group', () => {
+  const f=fixture(), status=localStatusRows(f), model=[
+    f.nativeUser(3500,status[0].content[0].text,{providerData:{skipRun:true,agent:'cli',conversationRequestId:'model-request'}}),
+    f.nativeUser(3501,'<command-name>/model</command-name>',{providerData:{skipRun:true,agent:'cli',conversationRequestId:'model-request'}})
+  ];
+  f.setEvents([{...f.submit,nativeTranscript:f.nativeTranscript},f.hook('Stop',2000)]);
+  f.writeNative([f.nativeUser(900),...status,...model]);
+  const turn=f.read({nativeTranscriptRoot:f.nativeTranscriptRoot});
+  assert.equal(turn.state,'unconfirmed');assert.match(turn.reason,/unsupported native local command/);
+  assert.equal(turn.laterInputAt,f.iso(3500));assert.equal(turn.ignoredLocalCommands[0].recordCount,3);
+});
+
+test('completed native model and login administration do not invalidate an earlier Stop, but incomplete or unbound output does', () => {
+  for(const command of ['/model','/login'])for(const mode of ['complete','missing-output','foreign-output']){
+    const f=fixture(), status=localStatusRows(f), first={...status[0],id:'admin-caveat',timestamp:f.iso(3500)},
+      input={...status[2],id:'admin-command',parentId:'admin-caveat',timestamp:f.iso(3501),content:[{type:'input_text',text:`<command-name>${command}</command-name>`}]},
+      output={...status[2],id:'admin-output',parentId:mode==='foreign-output'?'foreign':'admin-command',timestamp:f.iso(3502),content:[{type:'input_text',text:'<local-command-stdout></local-command-stdout>'}]};
+    f.setEvents([{...f.submit,nativeTranscript:f.nativeTranscript},f.hook('Stop',2000)]);
+    f.writeNative([f.nativeUser(900),...status,first,input,...(mode==='missing-output'?[]:[output])]);
+    const turn=f.read({nativeTranscriptRoot:f.nativeTranscriptRoot});
+    assert.equal(turn.state,mode==='complete'?'stopped':'unconfirmed',command+'/'+mode);
+    if(mode==='complete')assert.deepEqual(turn.ignoredLocalCommands.map(x=>x.command),['/status',command]);
+  }
 });

@@ -27,3 +27,7 @@ coverage/
 # Private original audit inputs; retain unchanged locally / 原始审核输入含本机路径，原样留存本地
 /hark_yotta_review/Hark审核报告-2026-11-04.md
 /hark_yotta_review/repro/
+/hark_yotta_review/复审-a27a6d2/
+
+# Withdrawn first packaging candidate; retained locally for audit / 首次打包未通过全量验收，本地保留审计
+/versions/cbc-v2-0.6.0/

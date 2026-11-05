@@ -38,7 +38,13 @@ Codex是唯一主控，负责规划、核心决策、派工、审查、验收与
 
 派工提示词编写方法归delegate-worker；协调器强制task-spec-v1并注入规则、保存上下文回执和full/delta选择。新dispatch须--spec-file；返工改变正式要求时同时更新规格。sessions只提供历史与候选，不替代实时身份核对。CBC有原生系统提示追加接口，ZCode为V4用户文本注入，不将二者声称为相同强度的系统约束。只在已交付的真实会话中复用上下文，未确认执行不得直接省略背景。
 
-## 安装与验证
+## CBC分层版本维护
+
+CBC V2通过`agent-bridge/bin/agent-bridge.js`薄路由选择工程内`versions/<发布ID>/`，映射与默认开关在同目录layered-release.json；旧CLI保留为agent-bridge-v1.js。先核对该配置及任务runtimeReleaseId再定位源码，不能把旧lib的修改当作已修复V2。已有V2必须固定其运行版本，不热改已发布目录；在隔离候选中修改和测试，生成新版本后切换新任务默认。旧任务不自动改写协议或迁移会话。
+
+Herdr侧栏状态由已安装herdr-codebuddy插件负责。新CBC只追加cbc-task-events任务Hook；旧Hook的V1兼容路径暂留。不能为了删除显示冗余而删除任务证据、身份/审批门禁或在途旧任务所需代码。使用与限制见docs/CBC分层协议发布与验证.md及版本内docs/layered-v2/05-使用与维护.md。
+
+## 安装与验证（通用）
 
 OpenCode V2通过原生TUI与官方CLI API协作，真实sessionID与目录必须匹配；会话规则采用持久指令键，模型variant查目录再设置。不使用V1协议或复制认证材料，不改业务项目配置。API提交使用稳定准入ID，观察器状态核对不占模型轮次；关闭Pane不能认定后台执行已停。维护入口为lib/opencode.js、bin/opencode-worker.js及docs/OpenCode接入与验证.md。
 

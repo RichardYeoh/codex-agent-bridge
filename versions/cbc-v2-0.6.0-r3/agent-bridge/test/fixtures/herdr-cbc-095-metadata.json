@@ -1,0 +1,30 @@
+{
+  "origin": "Sanitized shape of the read-only MC039 Herdr 0.9.5 capture; identifiers and project path replaced",
+  "pane": {
+    "id": "cli:pane:get",
+    "result": {
+      "type": "pane_info",
+      "pane": {
+        "agent": "codebuddy", "agent_status": "idle", "cwd": "fixture-project", "focused": false,
+        "label": "cbc", "pane_id": "fixture-pane", "revision": 2,
+        "scroll": { "max_offset_from_bottom": 1304, "offset_from_bottom": 0, "viewport_rows": 43 },
+        "tab_id": "fixture-tab", "terminal_id": "fixture-terminal",
+        "terminal_title": "Read and execute delegated task round prompt",
+        "terminal_title_stripped": "Read and execute delegated task round prompt", "workspace_id": "fixture-workspace"
+      }
+    }
+  },
+  "agent": {
+    "id": "cli:agent:get",
+    "result": {
+      "type": "agent_info",
+      "agent": {
+        "agent": "codebuddy", "agent_status": "idle", "cwd": "fixture-project", "focused": false,
+        "name": "cbc", "pane_id": "fixture-pane", "revision": 2, "state_change_seq": 1289,
+        "tab_id": "fixture-tab", "terminal_id": "fixture-terminal",
+        "terminal_title": "Read and execute delegated task round prompt",
+        "terminal_title_stripped": "Read and execute delegated task round prompt", "workspace_id": "fixture-workspace"
+      }
+    }
+  }
+}

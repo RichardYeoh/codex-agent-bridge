@@ -3,14 +3,14 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { api, resultPayload } = require('./herdr');
-const { config, readJson } = require('./util');
+const { config, readJson, sleep } = require('./util');
 const { leaseForEvent } = require('./worker-lease');
 const { proveWorkerProcess } = require('./windows-worker-process');
 
 const NATIVE_BOUNDARY_HOOKS = new Set(['SessionStart', 'Stop']);
 const SAFE_GUARD_STAGES = new Set(['preflight', 'task-binding', 'native-lease', 'pane-agent-read',
-  'pane-inventory', 'pane-process-info', 'visible-pane-read', 'native-hook-read',
-  'process-query', 'target-process-query', 'process-proof',
+  'pane-inventory', 'pane-process-info', 'visible-pane-read', 'native-metadata', 'pane-ownership', 'native-hook-read',
+  'executable-resolution', 'process-query', 'target-process-query', 'process-proof',
   'preflight-stability', 'pane-run']);
 const SAFE_PROCESS_PROOF_CODES = new Set(['query-timeout', 'query-access-denied', 'query-unavailable',
   'query-failed', 'query-unreadable', 'process-missing-or-unreadable', 'process-identity-changed', 'identity-unconfirmed']);
@@ -24,6 +24,13 @@ function reject(reason, { guardStage = 'preflight', processProofCode } = {}) {
   error.guardStage = SAFE_GUARD_STAGES.has(guardStage) ? guardStage : 'preflight';
   if (SAFE_PROCESS_PROOF_CODES.has(processProofCode)) error.processProofCode = processProofCode;
   return error;
+}
+
+function guardDiagnostics(error) {
+  if (error?.code !== 'CBC_PROMPT_GUARD_REJECTED') return {};
+  return { ...(SAFE_GUARD_STAGES.has(error.guardStage) ? { guardStage: error.guardStage } : {}),
+    ...(SAFE_PROCESS_PROOF_CODES.has(error.processProofCode) ? { processProofCode: error.processProofCode } : {}),
+    ...([1, 2].includes(error.preflightReadAttempts) ? { preflightReadAttempts: error.preflightReadAttempts } : {}) };
 }
 
 function unknownOutcome(kind, cause) {
@@ -262,6 +269,7 @@ async function inspect(task, deps) {
     stage = 'visible-pane-read';
     const visible = readVisibleText(await call(task.herdrSession, ['pane', 'read', task.paneId, '--source', 'visible']));
     checkDialog(visible);
+    stage = 'native-metadata';
     if (!pane || pane.pane_id !== task.paneId || pane.terminal_id !== task.terminalId
         || !agent || agent.pane_id !== task.paneId || agent.agent !== 'codebuddy'
         || agent.terminal_id !== task.terminalId
@@ -271,6 +279,7 @@ async function inspect(task, deps) {
       throw reject('native Pane or agent state is not ready and exactly bound');
     }
     stableSequence(agent, task);
+    stage = 'pane-ownership';
     const paneOwners = paneInventory.filter(item => item?.pane_id === task.paneId);
     const terminalOwners = paneInventory.filter(item => item?.terminal_id === task.terminalId);
     const agentAtPane = agentInventory.filter(item => item?.pane_id === task.paneId);
@@ -304,6 +313,7 @@ async function inspect(task, deps) {
       && validAfter(latestSessionHook.timestamp, task.workerStartedAt);
     const source = currentBoundary ? null : sourceTaskIfAllowed(task, deps.readTask);
     const hook = hookBoundary(task, events, source);
+    stage = 'executable-resolution';
     const binary = nativeCbcBinary(task, deps);
     const resolveOptions = { ...(deps.resolveCbcOptions || {}),
       nodeExecutable: deps.resolveCbcOptions?.nodeExecutable || deps.nodeExecutable || task.nodeExecutable || process.execPath };
@@ -325,7 +335,7 @@ async function inspect(task, deps) {
       completionSeq: agent.completion_seq ?? null, proof, proofFingerprint: JSON.stringify(proof) };
   } catch (error) {
     if (error?.code === 'CBC_PROMPT_GUARD_REJECTED') {
-      if (!SAFE_GUARD_STAGES.has(error.guardStage)) error.guardStage = stage;
+      if (error.guardStage === 'preflight' || !SAFE_GUARD_STAGES.has(error.guardStage)) error.guardStage = stage;
       throw error;
     }
     throw reject('read-only identity verification failed', {
@@ -339,19 +349,29 @@ async function submit(task, text, deps = {}) {
   if (typeof text !== 'string' || !text.trim() || Buffer.byteLength(text, 'utf8') > 128 * 1024) {
     throw reject('prompt text is empty or exceeds the safe size limit');
   }
-  let before, after;
-  try {
-    before = await inspect(task, deps);
-    after = await inspect(task, deps);
-    if (before.hookFingerprint !== after.hookFingerprint
-        || before.agentFingerprint !== after.agentFingerprint
-        || before.completionSeq !== after.completionSeq
-        || before.proofFingerprint !== after.proofFingerprint) {
-      throw reject('native Hook, agent, completion, or process identity changed during preflight', { guardStage: 'preflight-stability' });
+  let before, after, preflightReadAttempts = 0;
+  for (;;) {
+    try {
+      preflightReadAttempts++;
+      before = await inspect(task, deps);
+      after = await inspect(task, deps);
+      if (before.hookFingerprint !== after.hookFingerprint
+          || before.agentFingerprint !== after.agentFingerprint
+          || before.completionSeq !== after.completionSeq
+          || before.proofFingerprint !== after.proofFingerprint) {
+        throw reject('native Hook, agent, completion, or process identity changed during preflight', { guardStage: 'preflight-stability' });
+      }
+      break;
+    } catch (error) {
+      // Retry one timed-out read before any write, restarting both full checks. / 仅在写入前重试一次超时读取，重新进行两次完整校验。
+      if (error?.code === 'CBC_PROMPT_GUARD_REJECTED' && error.processProofCode === 'query-timeout'
+          && ['process-query', 'target-process-query'].includes(error.guardStage) && preflightReadAttempts === 1) {
+        await (deps.pause || sleep)(250); continue;
+      }
+      const failure = error?.code === 'CBC_PROMPT_GUARD_REJECTED' ? error : reject('read-only identity verification failed');
+      failure.preflightReadAttempts = preflightReadAttempts;
+      throw failure;
     }
-  } catch (error) {
-    if (error?.code === 'CBC_PROMPT_GUARD_REJECTED') throw error;
-    throw reject('read-only identity verification failed');
   }
 
   const call = deps.call || api;
@@ -379,7 +399,7 @@ async function submit(task, text, deps = {}) {
     requestSent: true,
     transportAcknowledgement: cliReceipt ? { transport: 'herdr-cli', exitCode: 0, emptyStdout: response == null } : null,
     processProof: after.proof,
-    guard: { nativeSnapshotStableBeforeInput: true, checkSendAtomic: false },
+    guard: { nativeSnapshotStableBeforeInput: true, checkSendAtomic: false, preflightReadAttempts },
   };
 }
 
@@ -398,4 +418,4 @@ function readSubmissionActivity(task) {
   return { source: 'cbc-native-hook', name: latest.name, round: latest.round, timestamp: latest.timestamp };
 }
 
-module.exports = { submit, resolveCbcExecutable, nativeCbcBinary, hookBoundary, checkDialog, readSubmissionActivity };
+module.exports = { submit, resolveCbcExecutable, nativeCbcBinary, hookBoundary, checkDialog, readSubmissionActivity, guardDiagnostics };

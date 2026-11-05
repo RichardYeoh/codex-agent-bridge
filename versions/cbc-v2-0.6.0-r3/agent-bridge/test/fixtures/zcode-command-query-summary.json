@@ -1,0 +1,15 @@
+{
+  "results": [
+    {
+      "key": {
+        "sessionId": "own-native",
+        "commandId": "own-command"
+      },
+      "result": {
+        "commandId": "own-command",
+        "status": "accepted",
+        "revisionAtDecision": 0
+      }
+    }
+  ]
+}

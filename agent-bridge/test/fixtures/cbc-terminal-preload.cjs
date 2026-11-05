@@ -66,6 +66,8 @@ processProof.proveWorkerProcess = async input => {
   }
   state.processProofCalls += 1;
   write(state);
+  if (state.processProofFailure) throw Object.assign(new Error('fixture private process error'), {
+    processProofCode: state.processProofFailure, guardStage: 'process-query' });
   return { kind: 'cbc', pid: state.nodePid, parentPid: state.processInfo.shell_pid,
     shellPid: state.processInfo.shell_pid, depth: 1, processName: 'node.exe',
     processStartedAt: state.processStartedAt };
