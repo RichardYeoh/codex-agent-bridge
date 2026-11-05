@@ -594,7 +594,10 @@ async function recoverOne(task, options = {}) {
     }
   }
   if (task.status === 'submission_unknown') {
-    if (task.agent === 'cbc' && options['cbc-transcript']) {
+    if (task.agent === 'zcode') {
+      const result = await require('../lib/zcode-reconciliation').recover(task);
+      return [`ZCode exact native command and terminal reconciled to ${result.status}; transport uncertainty retained, no prompt sent`];
+    } else if (task.agent === 'cbc' && options['cbc-transcript']) {
       const result = await require('../lib/cbc-reconciliation').recover(task, { nativeTranscript: options['cbc-transcript'] });
       return [`CBC exact native input and round execution reconciled to ${result.status}; no prompt or interrupt sent`];
     } else if (task.agent === 'cbc' && task.cbcTurnProtocol === 1) {
@@ -658,7 +661,8 @@ async function recover(options) {
         return { taskId: id, actions: await recoverOne(task, options) };
       }));
     } catch (error) {
-      results.push({ taskId: id, error: error.message });
+      results.push({ taskId: id, error: error.message,
+        ...(error.diagnosticFile ? { diagnosticFile: error.diagnosticFile, failedChecks: error.failedChecks || [] } : {}) });
     }
   }
   return results;
@@ -739,6 +743,11 @@ async function main() {
         receiptFile: required(options['rejection-receipt'], 'rejection-receipt'),
       }));
   }
+  else if (['diagnose-zcode-admission', 'diagnose-zcode-terminal'].includes(command)) {
+    const id = required(options._[0], 'task id');
+    result = await withLock('dispatch-global', () => withLock(id,
+      () => require('../lib/zcode-reconciliation')[command === 'diagnose-zcode-terminal' ? 'diagnoseTerminal' : 'diagnose'](loadTask(id))));
+  }
   else if (command === 'dispatch') {
     options['task-id'] ||= makeTaskId();
     result = await withLock('dispatch-global', () => withLock(options['task-id'], () => dispatch(options)));
@@ -770,7 +779,7 @@ async function main() {
       .filter(id => fs.existsSync(path.join(root, id, 'task.json')))
       .map(id => readJson(path.join(root, id, 'task.json'))) : [];
   } else {
-    throw new Error('Usage: agent-bridge <dispatch|rework|resume|observe|settle|adopt-restored|abandon|reconcile-submission|message-retire|adopt-zcode|status|read|cancel|accept|ack|recover|notifications|list|agents|sessions> [options]');
+    throw new Error('Usage: agent-bridge <dispatch|rework|resume|observe|settle|adopt-restored|abandon|reconcile-submission|diagnose-zcode-admission|diagnose-zcode-terminal|message-retire|adopt-zcode|status|read|cancel|accept|ack|recover|notifications|list|agents|sessions> [options]');
   }
   } catch (error) {
     if (['dispatch', 'rework', 'resume', 'cancel', 'observe', 'settle', 'adopt-restored', 'abandon'].includes(command)) {

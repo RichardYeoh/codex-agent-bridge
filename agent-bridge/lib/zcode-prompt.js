@@ -36,7 +36,8 @@ async function submit(task, _pointer, { inspect = agentInfo, inspectPane = paneI
       }
       const agent = assertWorker(task, inspect(task.herdrSession, task.paneId));
       const pane = inspectPane(task.herdrSession, task.paneId);
-      if (!['idle', 'done'].includes(agent.agent_status) || agent.agent_session?.value !== task.workerSessionId
+      // Missing custom-source metadata is covered by the bound receipt and two live process proofs below. / 自定义来源缺字段由绑定回执及下方两次实时进程证明补足。
+      if (!['idle', 'done'].includes(agent.agent_status) || agent.agent_session?.value != null && agent.agent_session.value !== task.workerSessionId
           || pane?.pane_id !== task.paneId || pane.terminal_id !== task.terminalId) {
         throw preflightError('ZCode local input Pane identity or readiness is unconfirmed');
       }
@@ -55,11 +56,19 @@ async function submit(task, _pointer, { inspect = agentInfo, inspectPane = paneI
     const after = await verify();
     if (before.pid !== after.pid || before.processStartedAt !== after.processStartedAt) throw preflightError('ZCode wrapper changed during input preflight');
     started = true;
-    const response = call(task.herdrSession, ['pane', 'run', task.paneId, task.promptPath]);
-    if (response == null || response.error || response.ok === false) throw new Error('ZCode local input acknowledgment is uncertain; no automatic resend');
-    return { transport: 'local-wrapper-pane', inputAccepted: true, nativeAcceptanceConfirmed: false, processProof: after };
+    const cliReceipt = call(task.herdrSession, ['pane', 'run', task.paneId, task.promptPath], { includeTransportReceipt: true });
+    const typed = cliReceipt?.transport === 'herdr-cli', response = typed ? cliReceipt.response : cliReceipt;
+    if (typed && (cliReceipt.exitCode !== 0 || !Object.hasOwn(cliReceipt, 'response')) || !typed && cliReceipt == null
+        || response?.error || response?.result?.error || response?.ok === false || response?.result?.ok === false) {
+      throw new Error('ZCode local input acknowledgment is uncertain; no automatic resend');
+    }
+    // An exit-zero empty response proves transport only, never native admission. / 零退出码空响应仅证明传输，不证明原生接纳。
+    return { transport: 'local-wrapper-pane', status: 'text_queued', inputAccepted: true, nativeAcceptanceConfirmed: false,
+      transportAcknowledgement: typed ? { transport: 'herdr-cli', exitCode: 0, emptyStdout: response == null } : null,
+      processProof: after };
   } catch (error) {
     if (!started) { error.origin = 'bridge-preflight'; error.requestSent = false; }
+    else error.transportDiagnostic = { phase: 'pane-run', outcome: 'uncertain', requestSent: true };
     throw error;
   }
 }

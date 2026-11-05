@@ -118,7 +118,7 @@ function assertUnregisteredWrapperOwner(current, expectedSessionId, lease) {
   catch (error) { throw bindingError(`ZCode first-registration inventory is incomplete: ${safeMessage(error.message)}`); }
   const here = records.find(item => item.pane_id === current.paneId);
   if (!here || here.terminal_id !== current.terminalId) throw bindingError('ZCode first-registration Pane is absent from the complete inventory');
-  if (here.agent && (here.agent !== 'zcode' || here.agent_session?.value !== (expectedSessionId || null))) {
+  if (here.agent && (here.agent !== 'zcode' || here.agent_session?.value != null && here.agent_session.value !== (expectedSessionId || null))) {
     throw bindingError('ZCode first-registration Pane is already owned by another agent or native session');
   }
   if (here.agent_session?.value && here.agent_session.value !== (expectedSessionId || null)) {
@@ -188,6 +188,7 @@ function task() {
     workerTerminalId = current.terminalId;
   }
   if (current.terminalId !== workerTerminalId) throw bindingError('ZCode terminal was replaced; this worker will detach without stopping native work');
+  // Custom Herdr sources omit native IDs; this wrapper still checks its exact task, lease and process ownership. / Herdr自定义来源不返回原生ID，本包装器仍核对精确任务、租约和进程归属。
   const expectedSessionId = sessionId || current.workerSessionId || null;
   if (!currentLease || currentLease.taskId !== current.id || currentLease.paneId !== current.paneId
       || currentLease.terminalId !== workerTerminalId) {
@@ -215,7 +216,7 @@ function task() {
     verifyPaneAgent(bootstrap ? { ...current, workerSessionId: sessionId } : current,
       current.paneId, workerTerminalId, { inspectAgent: agentInfo, inspectPane: paneInfo,
         expectedSessionId: bootstrap ? sessionId : (current.workerSessionId || null),
-        allowUnregisteredSession: initialBootstrap, allowUnregisteredAgent: !wrapperBootstrapComplete, context: 'formal-rebind' });
+        allowUnregisteredSession: Boolean(expectedSessionId), allowUnregisteredAgent: !wrapperBootstrapComplete, context: 'formal-rebind' });
     workerPaneId = current.paneId;
     process.env.HERDR_PANE_ID = workerPaneId;
     activeTask = current;
@@ -225,7 +226,7 @@ function task() {
       verifyPaneAgent(bootstrap ? { ...current, workerSessionId: sessionId } : current,
         current.paneId, workerTerminalId, { inspectAgent: agentInfo, inspectPane: paneInfo,
           expectedSessionId: bootstrap ? sessionId : (current.workerSessionId || null),
-          allowUnregisteredSession: bootstrap && !bootstrapReported, allowUnregisteredAgent: !wrapperBootstrapComplete, context: 'same-pane' });
+          allowUnregisteredSession: Boolean(expectedSessionId), allowUnregisteredAgent: !wrapperBootstrapComplete, context: 'same-pane' });
     } catch (error) {
       const journal = activeTask ? readJson(journalPath(current), null) : null;
       if (error?.code === 'ZCODE_LOCAL_BINDING_REPLACED' && hasPendingPaneRebind(current, state, journal)) throw rebindPendingError();
@@ -289,7 +290,7 @@ function report(state, detail = {}) {
   if (firstRegistration) {
     const expectedSession = sessionId || current.workerSessionId || null;
     verifyPaneAgent({ ...current, workerSessionId: expectedSession }, current.paneId, current.terminalId,
-      { inspectAgent: agentInfo, inspectPane: paneInfo, expectedSessionId: expectedSession, context: 'post-registration' });
+      { inspectAgent: agentInfo, inspectPane: paneInfo, expectedSessionId: expectedSession, allowUnregisteredSession: Boolean(expectedSession), context: 'post-registration' });
     wrapperBootstrapComplete = true;
     if (bootstrap && current.workerSessionId == null && sessionId) bootstrapReported = true;
   }
@@ -440,7 +441,8 @@ async function initialize() {
     sessionId = ack.result.sessionId;
     writeJsonAtomic(file, { ...stored, status: 'acknowledged', ack });
   }
-  await subscribe();
+  const snapshot = await subscribe();
+  if (snapshot?.sessionId !== sessionId) throw bindingError('ZCode subscribed native session does not match this wrapper');
   let prior = activeTask.round > 0 ? readJson(journalPath(activeTask), null) : null;
   if (prior && !['accepted', 'cancelled'].includes(activeTask.status)) {
     if (prior.envelope.sessionId !== sessionId) throw new Error('ZCode command session identity mismatch');

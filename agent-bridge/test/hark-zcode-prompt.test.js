@@ -57,3 +57,40 @@ test('a lost pane.run response remains uncertain and is never automatically retr
   await assert.rejects(submit(f.task, 'unused', f.deps), error => error.requestSent !== false);
   assert.equal(f.calls.filter(args => args[1] === 'run').length, 1);
 });
+
+test('custom-source missing native metadata requires exact receipt and live wrapper process proof', async () => {
+  const f = fixture(); delete f.agent.agent_session;
+  assert.equal((await submit(f.task, 'unused', f.deps)).nativeAcceptanceConfirmed, false);
+  assert.equal(f.proofs.length, 2);
+  const g = fixture(); delete g.agent.agent_session;
+  g.deps.prove = async () => { throw new Error('process no longer bound'); };
+  await assert.rejects(submit(g.task, 'unused', g.deps), e => e.requestSent === false);
+  assert.equal(g.calls.some(c => c[1] === 'run'), false);
+  const h = fixture(); h.agent.agent_session.value = 'foreign-native';
+  await assert.rejects(submit(h.task, 'unused', h.deps), e => e.requestSent === false);
+  assert.equal(h.calls.length, 0);
+});
+
+test('real exit-zero empty CLI stdout is recorded as text_queued, not native acceptance', async () => {
+  const f = fixture(), cli = path.join(root, 'empty-cli.cjs'), log = path.join(root, 'empty-cli.calls');
+  fs.writeFileSync(cli, `require('node:fs').appendFileSync(${JSON.stringify(log)},'called\\n');`);
+  const previous = process.env.HERDR_BIN_PATH; process.env.HERDR_BIN_PATH = cli;
+  const original = f.deps.call;
+  f.deps.call = (session, args, options) => args[1] === 'run' ? require('../lib/herdr').api(session, args, options) : original(session, args);
+  try {
+    const result = await submit(f.task, 'unused', f.deps);
+    assert.equal(result.status, 'text_queued'); assert.equal(result.nativeAcceptanceConfirmed, false);
+    assert.deepEqual(result.transportAcknowledgement, { transport: 'herdr-cli', exitCode: 0, emptyStdout: true });
+    assert.equal(fs.readFileSync(log, 'utf8'), 'called\n');
+  } finally { if (previous === undefined) delete process.env.HERDR_BIN_PATH; else process.env.HERDR_BIN_PATH = previous; }
+});
+
+test('null, malformed CLI receipt, nonzero and nested negative outcomes retain uncertainty with no second write', async () => {
+  for (const response of [null, { transport: 'herdr-cli', exitCode: 0 }, { transport: 'herdr-cli', exitCode: 7, response: null },
+    { transport: 'herdr-cli', exitCode: 0, response: { result: { error: { code: 'denied' } } } }]) {
+    const f = fixture(), original = f.deps.call; let writes = 0;
+    f.deps.call = (session, args) => { if (args[1] === 'run') { writes++; return response; } return original(session, args); };
+    await assert.rejects(submit(f.task, 'unused', f.deps), error => error.requestSent !== false && error.transportDiagnostic?.outcome === 'uncertain');
+    assert.equal(writes, 1);
+  }
+});

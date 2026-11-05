@@ -17,6 +17,7 @@ herdr.agentInfo = (_session, paneId) => {
   const value = read(), current = task();
   if (value.closedPane) throw new Error('Fixture Pane is closed');
   if (value.agentAbsent) return null;
+  if (value.omitNativeSession) { const agent = { ...value.agent }; delete agent.agent_session; return agent; }
   return { agent: 'zcode', pane_id: paneId, terminal_id: value.agent.terminal_id || current.terminalId,
     agent_session: { value: value.agent.agent_session?.value ?? current.workerSessionId ?? null }, ...value.agent };
 };
@@ -48,6 +49,7 @@ herdr.api = (session, args) => {
     const registered = { agent: 'zcode', pane_id: value.agent.pane_id || current.paneId,
       terminal_id: value.agent.terminal_id || current.terminalId,
       agent_session: { value: value.agent.agent_session?.value ?? current.workerSessionId ?? null }, ...value.agent };
+    if (value.omitNativeSession) delete registered.agent_session;
     const agents = value.agentAbsent ? [] : value.agents || (value.agent.agent || current.agent === 'zcode' ? [registered] : []);
     write(value); return { result: { agents } };
   }
@@ -65,7 +67,7 @@ herdr.api = (session, args) => {
     value.agent.agent = 'zcode';
     value.agent.agent_status = args[args.indexOf('--state') + 1];
     const session = args.indexOf('--agent-session-id');
-    if (session >= 0) value.agent.agent_session = { value: args[session + 1] };
+    if (session >= 0 && !value.omitNativeSession) value.agent.agent_session = { value: args[session + 1] };
     value.agent.pane_id = args[2];
     value.agent.terminal_id = value.pane?.terminal_id || task().terminalId;
     if (value.agent.agent_status !== 'working') value.agent.completion_seq++;
@@ -139,7 +141,7 @@ class Remote extends EventEmitter {
 class Conversation extends EventEmitter {
   constructor(remote, sessionId) { super(); this.remote = remote; this.sessionId = sessionId; }
   get snapshot() { return read().snapshot; }
-  async subscribe() { record('subscribe'); return this.snapshot; }
+  async subscribe() { record('subscribe'); const value = read(); value.snapshot.sessionId = value.wrongSnapshotSession || value.snapshot.sessionId || this.sessionId; write(value); return this.snapshot; }
   async dispose() { record('unsubscribe'); }
   async wait() { return new Promise(() => {}); }
 }

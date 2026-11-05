@@ -49,16 +49,16 @@ test('ZCode rebind remains limited to the original terminal and native session',
     { alive: pid => pid === process.pid }), /original terminal and native session/);
 });
 
-function workerFixture({ create = false, agentAbsent = false, oldWorkerPid = null } = {}) {
+function workerFixture({ create = false, agentAbsent = false, oldWorkerPid = null, omitNativeSession = false, wrongSnapshotSession = null, freshSaved = false } = {}) {
   const workerRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hark-zcode-worker-bind-'));
   const id = create ? 'hark-zcode-bootstrap' : 'hark-zcode-worker-bind';
   const dir = path.join(workerRoot, 'tasks', id); fs.mkdirSync(dir, { recursive: true });
   const task = { id, agent: 'zcode', stateDir: workerRoot, cwd: workerRoot, herdrSession: 'stub', paneId: 'old-pane', terminalId: 'terminal',
-    round: create ? 0 : 1, status: create ? 'ready' : 'running', workerSessionId: create ? null : 'native-session',
+    round: create || freshSaved ? 0 : 1, status: create ? 'ready' : 'running', workerSessionId: create ? null : 'native-session',
     observerGeneration: 4, promptPath: path.join(dir, 'submission.txt'), promptBody: 'fixture-only' };
   fs.writeFileSync(path.join(dir, 'task.json'), JSON.stringify(task));
   fs.writeFileSync(task.promptPath, 'fixture-only');
-  if (!create) fs.writeFileSync(path.join(dir, 'round-001-zcode-command.json'), JSON.stringify({
+  if (!create && !freshSaved) fs.writeFileSync(path.join(dir, 'round-001-zcode-command.json'), JSON.stringify({
     envelope: { type: 'sendText', sessionId: task.workerSessionId, commandId: 'native-command', payload: { text: 'fixture-only' } },
     status: 'acknowledged', ack: { commandId: 'native-command', status: 'accepted' },
   }));
@@ -68,9 +68,10 @@ function workerFixture({ create = false, agentAbsent = false, oldWorkerPid = nul
   const state = { snapshot: structuredClone(snapshot), ack: { commandId: 'native-command', status: 'accepted' }, agentAbsent,
     agent: { agent: 'zcode', pane_id: task.paneId, terminal_id: task.terminalId,
       agent_session: { value: task.workerSessionId }, agent_status: 'working' },
-    pane: { pane_id: task.paneId, terminal_id: task.terminalId }, calls: [] };
+    pane: { pane_id: task.paneId, terminal_id: task.terminalId }, calls: [], omitNativeSession, wrongSnapshotSession };
+  if (omitNativeSession) delete state.agent.agent_session;
   state.snapshot.sessionId = task.workerSessionId || null;
-  state.snapshot.control.activeWorks = create ? [] : [{ sourceCommandId: 'native-command' }];
+  state.snapshot.control.activeWorks = create || freshSaved ? [] : [{ sourceCommandId: 'native-command' }];
   state.snapshot.rows.window = [];
   fs.writeFileSync(stateFile, JSON.stringify(state));
   if (oldWorkerPid) writeJsonAtomic(path.join(dir, 'zcode-state.json'), { taskId: task.id, round: task.round,
@@ -204,3 +205,35 @@ test('replaced terminal retires the local observer without rewriting receipts or
 });
 
 test.after(() => fs.rmSync(root, { recursive: true, force: true }));
+
+for (const create of [true, false]) test('Herdr custom-source missing native ID supports exact wrapper ' + (create ? 'creation' : 'restore'), async () => {
+  const worker = workerFixture({ create, agentAbsent: true, omitNativeSession: true });
+  try {
+    await waitUntil(() => worker.output().includes(create ? 'zcode: idle' : 'zcode: working'), 'custom wrapper failed', worker);
+    const state = JSON.parse(fs.readFileSync(worker.stateFile));
+    assert.equal(state.agent.agent_session?.value ?? null, null);
+    assert.equal(state.calls.filter(c => c.op === 'command' && c.type === 'createSession').length, create ? 1 : 0);
+    assert.equal(state.calls.some(c => c.op === 'command' && c.type !== 'createSession'), false);
+    if (create) { worker.child.stdin.write(':resume\n'); await waitUntil(() => JSON.parse(fs.readFileSync(worker.stateFile)).calls.filter(c => c.op === 'subscribe').length === 2, 'second attach missing', worker); }
+  } finally { await stopWorker(worker); fs.rmSync(worker.root, { recursive: true, force: true }); }
+});
+test('missing Herdr native metadata never permits a foreign subscribed session', async () => {
+  const worker = workerFixture({ agentAbsent: true, omitNativeSession: true, wrongSnapshotSession: 'foreign-native' });
+  try {
+    await waitUntil(() => worker.output().includes('local observer detached'), 'foreign session not refused', worker);
+    const state = JSON.parse(fs.readFileSync(worker.stateFile));
+    assert.equal(state.calls.some(c => c.op === 'command'), false);
+    assert.equal(state.calls.some(c => c.op === 'herdr' && c.args?.[1] === 'report-agent'), false);
+  } finally { await stopWorker(worker); fs.rmSync(worker.root, { recursive: true, force: true }); }
+});
+
+test('failed round-zero startup resumes its already-created session without create or business command', async () => {
+  const worker = workerFixture({ agentAbsent: true, omitNativeSession: true, freshSaved: true });
+  try {
+    await waitUntil(() => worker.output().includes('zcode: idle'), 'saved round-zero did not become idle', worker);
+    const state = JSON.parse(fs.readFileSync(worker.stateFile));
+    const receipt = JSON.parse(fs.readFileSync(path.join(worker.dir, 'zcode-state.json')));
+    assert.equal(receipt.round, 0); assert.equal(receipt.sessionId, worker.task.workerSessionId);
+    assert.equal(receipt.readinessProtocol, 1); assert.equal(state.calls.some(c => c.op === 'command'), false);
+  } finally { await stopWorker(worker); fs.rmSync(worker.root, { recursive: true, force: true }); }
+});
